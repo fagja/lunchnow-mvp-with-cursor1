@@ -7,22 +7,30 @@ import { ApiResponse } from '@/types/api.types';
 export function createApiResponse<T>(
   data: T | undefined,
   status: number,
-  error?: string
+  error?: string,
+  headers?: Headers
 ): NextResponse {
   const response: ApiResponse<T> = {
     data,
     status,
     error
   };
-  
-  return NextResponse.json(response, { status });
+
+  return NextResponse.json(response, {
+    status,
+    headers
+  });
 }
 
 /**
  * 成功レスポンスを作成するヘルパー関数
  */
-export function createSuccessResponse<T>(data: T, status: number = 200): NextResponse {
-  return createApiResponse(data, status);
+export function createSuccessResponse<T>(
+  data: T,
+  status: number = 200,
+  headers?: Headers
+): NextResponse {
+  return createApiResponse(data, status, undefined, headers);
 }
 
 /**
