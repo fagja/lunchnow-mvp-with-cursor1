@@ -8,7 +8,8 @@ const API_BASE_URL = '/api/matches';
 
 /**
  * 相互いいね判定とマッチング登録関数
- * @param toUserId マッチング相手のユーザーID
+ * @param userId1 ユーザー1のID
+ * @param userId2 ユーザー2のID
  * @returns マッチング結果
  */
 export async function createMatch(userId1: number, userId2: number): Promise<MatchResponse> {

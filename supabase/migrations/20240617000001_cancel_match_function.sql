@@ -6,6 +6,7 @@ RETURNS void AS $$
 DECLARE
   v_user_id_1 BIGINT;
   v_user_id_2 BIGINT;
+  v_today DATE := CURRENT_DATE;
 BEGIN
   -- トランザクション開始
   BEGIN
@@ -32,11 +33,12 @@ BEGIN
       recruiting_since = NOW()
     WHERE id IN (v_user_id_1, v_user_id_2);
 
-    -- 両方向のいいねレコードを削除（当日分）
+    -- 両方向のいいねレコードを削除（当日分のみ）
     DELETE FROM public.likes
-    WHERE
+    WHERE (
       (from_user_id = v_user_id_1 AND to_user_id = v_user_id_2) OR
-      (from_user_id = v_user_id_2 AND to_user_id = v_user_id_1);
+      (from_user_id = v_user_id_2 AND to_user_id = v_user_id_1)
+    ) AND DATE(created_at) = v_today;
 
   EXCEPTION
     WHEN OTHERS THEN
