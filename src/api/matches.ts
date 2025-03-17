@@ -1,4 +1,4 @@
-import { MatchResponse } from '@/types/api.types';
+import { MatchResponse, CreateMatchRequest, CancelMatchRequest } from '@/types/api.types';
 import { fetchApi, postApi, getUserIdFromLocalStorage } from './api-client';
 
 /**
@@ -7,13 +7,21 @@ import { fetchApi, postApi, getUserIdFromLocalStorage } from './api-client';
 const API_BASE_URL = '/api/matches';
 
 /**
+ * ユーザーIDが存在しない場合のエラーレスポンスを生成
+ */
+const createUserIdError = (): MatchResponse => ({
+  error: 'ユーザーIDが取得できません。再度ログインしてください。',
+  status: 401
+});
+
+/**
  * 相互いいね判定とマッチング登録関数
  * @param userId1 ユーザー1のID
  * @param userId2 ユーザー2のID
  * @returns マッチング結果
  */
 export async function createMatch(userId1: number, userId2: number): Promise<MatchResponse> {
-  const matchData = {
+  const matchData: CreateMatchRequest = {
     userId1,
     userId2
   };
@@ -38,10 +46,7 @@ export async function getMyMatch(): Promise<MatchResponse> {
   const userId = getUserIdFromLocalStorage();
 
   if (!userId) {
-    return {
-      error: 'ユーザーIDが取得できません',
-      status: 400
-    };
+    return createUserIdError();
   }
 
   return getMatchByUserId(userId);
@@ -53,5 +58,12 @@ export async function getMyMatch(): Promise<MatchResponse> {
  * @returns キャンセル処理結果
  */
 export async function cancelMatch(matchId: number): Promise<MatchResponse> {
-  return postApi<MatchResponse>(`${API_BASE_URL}/${matchId}/cancel`, {});
+  const userId = getUserIdFromLocalStorage();
+
+  if (!userId) {
+    return createUserIdError();
+  }
+
+  const cancelData: CancelMatchRequest = { userId };
+  return postApi<MatchResponse>(`${API_BASE_URL}/${matchId}/cancel`, cancelData);
 }

@@ -29,6 +29,21 @@ export type CreateLikeRequest = {
 };
 
 /**
+ * マッチング生成リクエスト
+ */
+export type CreateMatchRequest = {
+  userId1: number;
+  userId2: number;
+};
+
+/**
+ * マッチングキャンセルリクエスト
+ */
+export type CancelMatchRequest = {
+  userId: number;
+};
+
+/**
  * メッセージ送信リクエスト
  */
 export type SendMessageRequest = {

@@ -7,6 +7,14 @@ import { fetchApi, postApi, getUserIdFromLocalStorage } from './api-client';
 const API_BASE_URL = '/api/likes';
 
 /**
+ * ユーザーIDが存在しない場合のエラーレスポンスを生成
+ */
+const createUserIdError = (): LikeResponse => ({
+  error: 'ユーザーIDが取得できません。再度ログインしてください。',
+  status: 401
+});
+
+/**
  * いいね登録関数
  * @param toUserId いいねを送るユーザーID
  */
@@ -14,10 +22,7 @@ export async function createLike(toUserId: number): Promise<LikeResponse> {
   const fromUserId = getUserIdFromLocalStorage();
 
   if (!fromUserId) {
-    return {
-      error: 'エラーが発生しました',
-      status: 400
-    };
+    return createUserIdError();
   }
 
   const likeData: CreateLikeRequest = {
@@ -36,10 +41,7 @@ export async function fetchSentLikes(date?: string): Promise<LikeResponse> {
   const userId = getUserIdFromLocalStorage();
 
   if (!userId) {
-    return {
-      error: 'エラーが発生しました',
-      status: 400
-    };
+    return createUserIdError();
   }
 
   const queryParams = new URLSearchParams({
@@ -61,10 +63,7 @@ export async function fetchReceivedLikes(date?: string): Promise<LikeResponse> {
   const userId = getUserIdFromLocalStorage();
 
   if (!userId) {
-    return {
-      error: 'エラーが発生しました',
-      status: 400
-    };
+    return createUserIdError();
   }
 
   const queryParams = new URLSearchParams({
