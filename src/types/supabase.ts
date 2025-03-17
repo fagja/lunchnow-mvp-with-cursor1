@@ -11,103 +11,103 @@ export interface Database {
     Tables: {
       users: {
         Row: {
-          id: string
+          id: number
+          nickname: string
+          grade: string
+          department: string
+          end_time: string | null
+          place: string | null
+          is_matched: boolean
+          recruiting_since: string
           created_at: string
-          email: string
-          username: string
-          avatar_url: string | null
-          bio: string | null
-          location: string | null
-          lunch_preferences: Json | null
-          last_active: string
+          updated_at: string
         }
         Insert: {
-          id?: string
+          id?: number
+          nickname: string
+          grade: string
+          department: string
+          end_time?: string | null
+          place?: string | null
+          is_matched?: boolean
+          recruiting_since?: string
           created_at?: string
-          email: string
-          username: string
-          avatar_url?: string | null
-          bio?: string | null
-          location?: string | null
-          lunch_preferences?: Json | null
-          last_active?: string
+          updated_at?: string
         }
         Update: {
-          id?: string
+          id?: number
+          nickname?: string
+          grade?: string
+          department?: string
+          end_time?: string | null
+          place?: string | null
+          is_matched?: boolean
+          recruiting_since?: string
           created_at?: string
-          email?: string
-          username?: string
-          avatar_url?: string | null
-          bio?: string | null
-          location?: string | null
-          lunch_preferences?: Json | null
-          last_active?: string
+          updated_at?: string
         }
       }
       likes: {
         Row: {
-          id: string
+          from_user_id: number
+          to_user_id: number
           created_at: string
-          from_user_id: string
-          to_user_id: string
         }
         Insert: {
-          id?: string
+          from_user_id: number
+          to_user_id: number
           created_at?: string
-          from_user_id: string
-          to_user_id: string
         }
         Update: {
-          id?: string
+          from_user_id?: number
+          to_user_id?: number
           created_at?: string
-          from_user_id?: string
-          to_user_id?: string
         }
       }
       matches: {
         Row: {
-          id: string
+          id: number
+          user_id_1: number
+          user_id_2: number
           created_at: string
-          user_id_1: string
-          user_id_2: string
+          is_canceled: boolean
         }
         Insert: {
-          id?: string
+          id?: number
+          user_id_1: number
+          user_id_2: number
           created_at?: string
-          user_id_1: string
-          user_id_2: string
+          is_canceled?: boolean
         }
         Update: {
-          id?: string
+          id?: number
+          user_id_1?: number
+          user_id_2?: number
           created_at?: string
-          user_id_1?: string
-          user_id_2?: string
+          is_canceled?: boolean
         }
       }
       messages: {
         Row: {
-          id: string
-          created_at: string
-          match_id: string
-          sender_id: string
+          id: number
+          match_id: number
+          from_user_id: number
           content: string
-          read_at: string | null
+          created_at: string
         }
         Insert: {
-          id?: string
-          created_at?: string
-          match_id: string
-          sender_id: string
+          id?: number
+          match_id: number
+          from_user_id: number
           content: string
-          read_at?: string | null
+          created_at?: string
         }
         Update: {
-          id?: string
-          created_at?: string
-          match_id?: string
-          sender_id?: string
+          id?: number
+          match_id?: number
+          from_user_id?: number
           content?: string
-          read_at?: string | null
+          created_at?: string
         }
       }
     }
