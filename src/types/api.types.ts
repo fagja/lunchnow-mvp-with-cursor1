@@ -47,7 +47,6 @@ export type CancelMatchRequest = {
  * メッセージ送信リクエスト
  */
 export type SendMessageRequest = {
-  match_id: number;
   from_user_id: number;
   content: string;
 };

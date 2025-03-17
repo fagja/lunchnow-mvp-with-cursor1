@@ -34,7 +34,6 @@ export async function sendMessage(
   }
 
   const messageData: SendMessageRequest = {
-    match_id: matchId,
     from_user_id: userId,
     content
   };
@@ -57,10 +56,7 @@ export async function fetchMessages(
   const userId = getUserIdFromLocalStorage();
 
   if (!userId) {
-    return {
-      error: 'ユーザーIDが取得できません。再度ログインしてください。',
-      status: 401
-    };
+    return createUserIdError();
   }
 
   const queryParams = new URLSearchParams({
