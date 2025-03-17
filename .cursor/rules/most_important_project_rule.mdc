@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+開発方針
+* 最優先事項: MVPの完成（最小限の機能で実用的な製品を迅速に完成させる）
+* 要件定義の遵守: [projectbrief.md](mdc:docs/projectbrief.md) [ui_requirement.md](mdc:docs/ui_requirement.md) [data_requirement.md](mdc:docs/data_requirement.md) に定義された要件を厳守する
+* MVPフォーカス: 「あったら良い機能」より「必要最低限の機能」を優先する
+開発ルール
+* 要件変更プロセス:
+1. 要件定義から逸脱する場合は必ず承認を求める
+2. 承認後は先にドキュメント更新を行ってから実装に移る
+* コード品質:
+1. 重複実装を徹底的に排除する
+2. 機能実装ごとにリファクタリングを行う
+3. 将来の拡張を見据えたコード設計を心がける
