@@ -24,7 +24,7 @@ export function validateRequired(value: string | undefined | null): string | nul
  */
 export function validateLength(value: string, min: number, max: number): string | null {
   if (!value) return null; // 空の場合はrequiredバリデーションに任せる
-  
+
   if (value.length < min) {
     return `${min}文字以上で入力してください`;
   }
@@ -43,7 +43,7 @@ export function validateNickname(nickname: string): string | null {
   // 必須チェック
   const requiredError = validateRequired(nickname);
   if (requiredError) return requiredError;
-  
+
   // 文字数チェック（1〜12文字）
   return validateLength(nickname, 1, 12);
 }
@@ -57,7 +57,7 @@ export function validateMessageContent(content: string): string | null {
   // 必須チェック
   const requiredError = validateRequired(content);
   if (requiredError) return requiredError;
-  
+
   // 文字数チェック（1〜200文字）
   return validateLength(content, 1, 200);
 }
@@ -68,6 +68,6 @@ export function validateMessageContent(content: string): string | null {
  * @param newValue 新しい値
  * @returns 変更があればtrue、なければfalse
  */
-export function isValueChanged(originalValue: any, newValue: any): boolean {
+export function isValueChanged<T>(originalValue: T, newValue: T): boolean {
   return JSON.stringify(originalValue) !== JSON.stringify(newValue);
 }

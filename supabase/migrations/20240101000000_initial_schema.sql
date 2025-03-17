@@ -51,8 +51,6 @@ CREATE TABLE public.matches (
   user_id_2 BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   is_canceled BOOLEAN NOT NULL DEFAULT false
-  -- ユニーク制約はMVP開発中、エラーを避けるため一時的にコメントアウト
-  -- UNIQUE (user_id_1, user_id_2)
 );
 
 -- 1ユーザー1マッチ制約を実装（アクティブなマッチのみ）
@@ -62,6 +60,14 @@ CREATE UNIQUE INDEX unique_active_match_user1
 
 CREATE UNIQUE INDEX unique_active_match_user2
   ON public.matches(user_id_2)
+  WHERE is_canceled = false;
+
+-- アクティブなマッチのみを対象としたユニーク制約
+CREATE UNIQUE INDEX unique_active_match_pair
+  ON public.matches(
+    LEAST(user_id_1, user_id_2),
+    GREATEST(user_id_1, user_id_2)
+  )
   WHERE is_canceled = false;
 
 -- ROW LEVEL SECURITY (RLS) ポリシーの設定
@@ -96,49 +102,7 @@ CREATE POLICY "全ユーザーがメッセージ閲覧可能" ON public.messages
 CREATE POLICY "全ユーザーがメッセージ作成可能" ON public.messages
   FOR INSERT WITH CHECK (true);
 
-/* トリガーは開発中、エラーを避けるため一時的にコメントアウト
--- トリガー関数: 相互いいねでマッチを自動作成
-CREATE OR REPLACE FUNCTION create_match_on_mutual_like()
-RETURNS TRIGGER AS $$
-DECLARE
-  reverse_like_exists BOOLEAN;
-BEGIN
-  -- 相互いいねの確認
-  SELECT EXISTS(
-    SELECT 1
-    FROM public.likes
-    WHERE from_user_id = NEW.to_user_id AND to_user_id = NEW.from_user_id
-  ) INTO reverse_like_exists;
-
-  -- 相互いいねが存在する場合、マッチを作成
-  IF reverse_like_exists THEN
-    -- ユーザーIDを昇順にする（重複を避けるため）
-    IF NEW.from_user_id < NEW.to_user_id THEN
-      INSERT INTO public.matches (user_id_1, user_id_2)
-      VALUES (NEW.from_user_id, NEW.to_user_id);
-    ELSE
-      INSERT INTO public.matches (user_id_1, user_id_2)
-      VALUES (NEW.to_user_id, NEW.from_user_id);
-    END IF;
-
-    -- 両ユーザーのis_matchedをtrueに更新
-    UPDATE public.users
-    SET is_matched = true
-    WHERE id IN (NEW.from_user_id, NEW.to_user_id);
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- いいね時のトリガーを設定
-CREATE TRIGGER trigger_create_match_on_mutual_like
-AFTER INSERT ON public.likes
-FOR EACH ROW
-EXECUTE FUNCTION create_match_on_mutual_like();
-*/
-
--- 更新時のタイムスタンプを自動更新するトリガー
+-- トリガー関数: 更新時のタイムスタンプを自動更新
 CREATE OR REPLACE FUNCTION update_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -151,3 +115,51 @@ CREATE TRIGGER trigger_users_update_timestamp
 BEFORE UPDATE ON public.users
 FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
+
+-- トリガー関数: マッチ登録時のユーザーステータス更新
+CREATE OR REPLACE FUNCTION update_user_match_status()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- マッチングに関わる両ユーザーのis_matchedをtrueに更新
+  UPDATE public.users
+  SET is_matched = TRUE
+  WHERE id IN (NEW.user_id_1, NEW.user_id_2) AND is_matched = FALSE;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_user_match_status
+AFTER INSERT ON public.matches
+FOR EACH ROW
+EXECUTE FUNCTION update_user_match_status();
+
+-- トリガー関数: マッチキャンセル時のユーザーステータス更新
+CREATE OR REPLACE FUNCTION update_user_match_status_on_cancel()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- キャンセルされたマッチの場合のみ処理
+  IF NEW.is_canceled = TRUE AND OLD.is_canceled = FALSE THEN
+    -- 他にアクティブなマッチがないユーザーのis_matchedをfalseに更新
+    UPDATE public.users u
+    SET is_matched = FALSE
+    WHERE u.id IN (NEW.user_id_1, NEW.user_id_2)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.matches m
+      WHERE m.is_canceled = FALSE
+      AND m.id != NEW.id
+      AND (
+        m.user_id_1 = u.id
+        OR m.user_id_2 = u.id
+      )
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_user_match_status_on_cancel
+AFTER UPDATE ON public.matches
+FOR EACH ROW
+EXECUTE FUNCTION update_user_match_status_on_cancel();

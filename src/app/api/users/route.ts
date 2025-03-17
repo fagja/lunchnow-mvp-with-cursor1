@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { UpdateUserRequest } from '@/types/api.types';
 import { User } from '@/types/database.types';
-import { 
-  createSuccessResponse, 
-  createErrorResponse, 
+import {
+  createSuccessResponse,
+  createErrorResponse,
   createValidationErrorResponse,
   logError
 } from '../_lib/api-utils';
@@ -16,7 +16,7 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as UpdateUserRequest;
-    
+
     // 必須パラメータバリデーション
     if (!body.nickname || !body.grade || !body.department) {
       return createValidationErrorResponse<User>('必須パラメータが不足しています');
@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       logError('ユーザー登録', error);
+      // 重複チェックとエラー詳細を削除し、汎用的なエラーメッセージに変更
       return createErrorResponse<User>('ユーザー登録処理でエラーが発生しました', 500);
     }
 

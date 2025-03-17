@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { UpdateUserRequest } from '@/types/api.types';
 import { User } from '@/types/database.types';
-import { 
-  createSuccessResponse, 
-  createErrorResponse, 
+import {
+  createSuccessResponse,
+  createErrorResponse,
   createValidationErrorResponse,
   isValidId,
   logError
@@ -35,7 +35,7 @@ export async function GET(
       if (error.code === 'PGRST116') {
         return createErrorResponse<User>('指定されたユーザーは存在しません', 404);
       }
-      
+
       return createErrorResponse<User>('ユーザー取得処理でエラーが発生しました', 500);
     }
 
@@ -61,25 +61,30 @@ export async function PATCH(
     }
 
     const body = await request.json() as UpdateUserRequest;
-    
+
     // 必須パラメータバリデーション
     if (!body.nickname || !body.grade || !body.department) {
       return createValidationErrorResponse<User>('必須パラメータが不足しています');
     }
 
-    // 更新データ準備
-    const updateData: any = {
+    // 更新データ準備（型安全に）
+    const updateData: Partial<User> = {
       nickname: body.nickname,
       grade: body.grade,
-      department: body.department
+      department: body.department,
+      // 任意フィールドを条件分岐なしで設定
+      end_time: body.end_time === undefined ? undefined : body.end_time,
+      place: body.place === undefined ? undefined : body.place,
+      // 募集開始時間更新
+      recruiting_since: new Date().toISOString()
     };
 
-    // 任意フィールドの更新
-    if (body.end_time !== undefined) updateData.end_time = body.end_time;
-    if (body.place !== undefined) updateData.place = body.place;
-    
-    // 募集開始時間更新
-    updateData.recruiting_since = new Date().toISOString();
+    // undefined値を持つプロパティを削除
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key as keyof typeof updateData] === undefined) {
+        delete updateData[key as keyof typeof updateData];
+      }
+    });
 
     // ユーザー更新処理
     const { data: user, error } = await supabase
@@ -91,6 +96,7 @@ export async function PATCH(
 
     if (error) {
       logError('ユーザー更新', error);
+      // 汎用的なエラーメッセージに変更
       return createErrorResponse<User>('ユーザー更新処理でエラーが発生しました', 500);
     }
 
