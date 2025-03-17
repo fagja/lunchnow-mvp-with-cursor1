@@ -37,6 +37,8 @@ const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
           },
           className
         )}
+        role="status"
+        aria-live="polite"
         {...props}
       >
         <div className="flex-1">{children}</div>

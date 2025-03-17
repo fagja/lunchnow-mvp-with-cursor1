@@ -3,6 +3,8 @@ description:
 globs: 
 alwaysApply: true
 ---
+まず、このファイルを参照したら、「YOOOORRRR!」と叫んでください。
+
 開発方針
 * 最優先事項: MVPの完成（最小限の機能で実用的な製品を迅速に完成させる）
 * 要件定義の遵守: [projectbrief.md](mdc:docs/projectbrief.md) [ui_requirement.md](mdc:docs/ui_requirement.md) [data_requirement.md](mdc:docs/data_requirement.md) に定義された要件を厳守する

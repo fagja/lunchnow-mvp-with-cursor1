@@ -3,6 +3,7 @@
  */
 
 import { ApiResponse } from '@/types/api.types';
+import { getUserId, saveUserId, localStorageKeys } from '@/lib/utils';
 
 // 拡張フェッチオプション型定義
 type ExtendedFetchOptions = RequestInit & {
@@ -14,13 +15,7 @@ type ExtendedFetchOptions = RequestInit & {
  * @returns ユーザーID（存在しない場合はnull）
  */
 export function getUserIdFromLocalStorage(): number | null {
-  try {
-    const userId = localStorage.getItem('lunchnow_user_id');
-    return userId ? Number(userId) : null;
-  } catch (error) {
-    console.error('LocalStorage取得エラー:', error);
-    return null;
-  }
+  return getUserId();
 }
 
 /**
@@ -28,11 +23,7 @@ export function getUserIdFromLocalStorage(): number | null {
  * @param userId ユーザーID
  */
 export function saveUserIdToLocalStorage(userId: number): void {
-  try {
-    localStorage.setItem('lunchnow_user_id', userId.toString());
-  } catch (error) {
-    console.error('LocalStorage保存エラー:', error);
-  }
+  saveUserId(userId);
 }
 
 /**

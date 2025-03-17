@@ -122,3 +122,108 @@ export function getLastUpdateText(): string {
   const minutes = now.getMinutes().toString().padStart(2, '0');
   return `最終更新: ${hours}:${minutes}`;
 }
+
+/**
+ * 必須入力チェックを行うユーティリティ関数
+ *
+ * @param value - チェック対象の値
+ * @returns 値が存在する場合はtrue、それ以外はfalse
+ */
+export function isRequired(value: string | null | undefined): boolean {
+  if (value === null || value === undefined) return false;
+  return value.trim().length > 0;
+}
+
+/**
+ * 文字数チェックを行うユーティリティ関数
+ *
+ * @param value - チェック対象の文字列
+ * @param minLength - 最小文字数（デフォルト: 1）
+ * @param maxLength - 最大文字数（デフォルト: 無制限）
+ * @returns 文字数が範囲内の場合はtrue、それ以外はfalse
+ */
+export function isValidLength(
+  value: string | null | undefined,
+  minLength: number = 1,
+  maxLength: number = Number.MAX_SAFE_INTEGER
+): boolean {
+  if (value === null || value === undefined) return minLength === 0;
+  const trimmedValue = value.trim();
+  return trimmedValue.length >= minLength && trimmedValue.length <= maxLength;
+}
+
+/**
+ * 特殊文字チェックを行うユーティリティ関数
+ * デフォルトでは英数字、かな、カナ、漢字、スペース、一部記号のみを許可
+ *
+ * @param value - チェック対象の文字列
+ * @param allowedPattern - 許可するパターン（正規表現）
+ * @returns 特殊文字が含まれていない場合はtrue、含まれている場合はfalse
+ */
+export function hasNoSpecialChars(
+  value: string | null | undefined,
+  allowedPattern: RegExp = /^[\p{L}\p{N}\p{Z}ぁ-んァ-ヶー一-龠々\s.,!?()_-]*$/u
+): boolean {
+  if (value === null || value === undefined) return true;
+  return allowedPattern.test(value);
+}
+
+/**
+ * ユーザーIDをLocalStorageに保存する関数
+ *
+ * @param userId - 保存するユーザーID
+ */
+export function saveUserId(userId: number): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(localStorageKeys.USER_ID, userId.toString());
+  }
+}
+
+/**
+ * LocalStorageからユーザーIDを取得する関数
+ *
+ * @returns 保存されたユーザーID、存在しない場合はnull
+ */
+export function getUserId(): number | null {
+  if (typeof window !== 'undefined') {
+    const userId = localStorage.getItem(localStorageKeys.USER_ID);
+    return userId ? parseInt(userId, 10) : null;
+  }
+  return null;
+}
+
+/**
+ * 設定をLocalStorageに保存する関数
+ *
+ * @param key - 設定のキー
+ * @param value - 保存する値
+ */
+export function saveSettings<T>(key: string, value: T): void {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('設定の保存に失敗しました:', error);
+    }
+  }
+}
+
+/**
+ * LocalStorageから設定を取得する関数
+ *
+ * @param key - 設定のキー
+ * @param defaultValue - デフォルト値
+ * @returns 保存された設定値、存在しない場合はデフォルト値
+ */
+export function getSettings<T>(key: string, defaultValue: T): T {
+  if (typeof window !== 'undefined') {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : defaultValue;
+    } catch (error) {
+      console.error('設定の取得に失敗しました:', error);
+      return defaultValue;
+    }
+  }
+  return defaultValue;
+}
