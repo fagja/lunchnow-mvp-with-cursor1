@@ -17,6 +17,41 @@ export const localStorageKeys = {
 };
 
 /**
+ * レスポンシブデザイン用のユーティリティ
+ * UI要件に基づいたブレークポイント
+ * 注: これらの値はtailwind.config.jsのscreens設定と一致させています
+ */
+export const breakpoints = {
+  sm: 375, // スマートフォン（最小幅）
+  md: 768, // タブレット
+  lg: 1024, // デスクトップ
+  xl: 1280, // 大型デスクトップ
+  '2xl': 1536, // 超大型ディスプレイ
+};
+
+/**
+ * レスポンシブデザイン用のコンテナサイズ
+ * モバイルファーストのアプローチに基づいて設定
+ */
+export const containerSizes = {
+  sm: 'max-w-[540px]', // スマートフォン用（375px以上）
+  md: 'max-w-[720px]', // タブレット用（768px以上）
+  lg: 'max-w-[960px]', // デスクトップ用（1024px以上）
+  xl: 'max-w-[1140px]', // 大型デスクトップ用（1280px以上）
+  '2xl': 'max-w-[1320px]', // 超大型ディスプレイ用（1536px以上）
+};
+
+/**
+ * レスポンシブなパディングを生成するユーティリティ
+ * モバイルファーストのアプローチに基づいて設定
+ */
+export const responsivePadding = {
+  base: 'px-4 py-3', // 基本（スマートフォン）
+  md: 'md:px-6 md:py-4', // タブレット以上
+  lg: 'lg:px-8 lg:py-5', // デスクトップ以上
+};
+
+/**
  * 現在時刻からend_time選択肢を生成する関数
  * ~HH:MM形式で、30分ごとに最大6時間後までの選択肢を生成
  *
@@ -30,8 +65,8 @@ export function generateEndTimeOptions(): string[] {
   const roundToNextHalfHour = (date: Date): Date => {
     const result = new Date(date);
     const minutes = result.getMinutes();
-  const roundedMinutes = minutes < 30 ? 30 : 0;
-  const hoursToAdd = minutes < 30 ? 0 : 1;
+    const roundedMinutes = minutes < 30 ? 30 : 0;
+    const hoursToAdd = minutes < 30 ? 0 : 1;
 
     result.setMinutes(roundedMinutes);
     result.setSeconds(0);
