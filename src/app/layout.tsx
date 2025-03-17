@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { PageContainer } from "@/components/layout/page-container";
+import { Footer } from "@/components/layout/footer";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,8 +21,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${inter.className} antialiased`}>
-        <PageContainer>{children}</PageContainer>
+      <body className={`${inter.className} antialiased flex flex-col min-h-screen`}>
+        <PageContainer>
+          <div className="flex flex-col min-h-[calc(100vh-2rem)]">
+            {children}
+            <Footer />
+          </div>
+        </PageContainer>
       </body>
     </html>
   );
