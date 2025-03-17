@@ -24,8 +24,8 @@ export type UpdateUserRequest = {
  * いいね（Like）リクエスト
  */
 export type CreateLikeRequest = {
-  from_user_id: number;
-  to_user_id: number;
+  fromUserId: number;
+  toUserId: number;
 };
 
 /**
@@ -50,11 +50,7 @@ export type RecruitingUsersResponse = ApiResponse<RecruitingUser[]>;
 /**
  * いいねレスポンス
  */
-export type LikeResponse = ApiResponse<{
-  like: Like;
-  is_match: boolean;
-  match?: Match;
-}>;
+export type LikeResponse = ApiResponse<Like | Like[]>;
 
 /**
  * マッチ取得レスポンス
