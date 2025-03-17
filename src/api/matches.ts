@@ -1,5 +1,15 @@
-import { MatchResponse, CreateMatchRequest, CancelMatchRequest } from '@/types/api.types';
-import { fetchApi, postApi, getUserIdFromLocalStorage } from './api-client';
+import {
+  CreateMatchRequest,
+  LikeResponse,
+  MatchResponse,
+  MatchesResponse
+} from '@/types/api.types';
+import {
+  fetchApi,
+  postApi,
+  getUserIdFromLocalStorage,
+  createUserIdError
+} from './api-client';
 
 /**
  * APIのベースURL
@@ -15,18 +25,62 @@ const createUserIdError = (): MatchResponse => ({
 });
 
 /**
- * 相互いいね判定とマッチング登録関数
- * @param userId1 ユーザー1のID
- * @param userId2 ユーザー2のID
- * @returns マッチング結果
+ * マッチング作成関数（いいね送信）
+ * @param toUserId いいねを送る相手のユーザーID
+ * @returns いいね結果
  */
-export async function createMatch(userId1: number, userId2: number): Promise<MatchResponse> {
+export async function createMatch(toUserId: number): Promise<LikeResponse> {
+  const fromUserId = getUserIdFromLocalStorage();
+
+  if (!fromUserId) {
+    return createUserIdError<LikeResponse>();
+  }
+
   const matchData: CreateMatchRequest = {
-    userId1,
-    userId2
+    from_user_id: fromUserId,
+    to_user_id: toUserId
   };
 
-  return postApi<MatchResponse>(API_BASE_URL, matchData);
+  return postApi<LikeResponse>('/api/matches', matchData);
+}
+
+/**
+ * マッチング一覧取得関数
+ * @param page ページ番号（1始まり、デフォルト1）
+ * @param limit 1ページあたりの件数（デフォルト10、最大50）
+ * @returns マッチング一覧
+ */
+export async function fetchMatches(
+  page: number = 1,
+  limit: number = 10
+): Promise<MatchesResponse> {
+  const userId = getUserIdFromLocalStorage();
+
+  if (!userId) {
+    return createUserIdError<MatchesResponse>();
+  }
+
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString()
+  });
+
+  return fetchApi<MatchesResponse>(`/api/matches?${queryParams.toString()}`);
+}
+
+/**
+ * マッチング詳細取得関数
+ * @param matchId マッチングID
+ * @returns マッチング詳細
+ */
+export async function fetchMatch(matchId: number): Promise<MatchResponse> {
+  const userId = getUserIdFromLocalStorage();
+
+  if (!userId) {
+    return createUserIdError<MatchResponse>();
+  }
+
+  return fetchApi<MatchResponse>(`/api/matches/${matchId}`);
 }
 
 /**

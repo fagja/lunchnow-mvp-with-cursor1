@@ -1,5 +1,17 @@
-import { UserResponse, UpdateUserRequest } from '@/types/api.types';
-import { fetchApi, patchApi, postApi, getUserIdFromLocalStorage, saveUserIdToLocalStorage } from './api-client';
+import {
+  CreateUserRequest,
+  UpdateUserRequest,
+  UserResponse,
+  UsersResponse
+} from '@/types/api.types';
+import {
+  fetchApi,
+  postApi,
+  patchApi,
+  getUserIdFromLocalStorage,
+  saveUserIdToLocalStorage,
+  createUserIdError
+} from './api-client';
 
 /**
  * APIのベースURL
@@ -9,57 +21,74 @@ const API_BASE_URL = '/api/users';
 /**
  * ユーザー登録関数
  * @param userData ユーザー情報
+ * @returns 登録結果
  */
-export async function createUser(userData: UpdateUserRequest): Promise<UserResponse> {
-  // クライアント側での詳細バリデーションは削除
+export async function registerUser(userData: CreateUserRequest): Promise<UserResponse> {
+  const response = await postApi<UserResponse>(API_BASE_URL, userData);
 
-  const result = await postApi<UserResponse>(API_BASE_URL, userData);
-
-  // 成功した場合はローカルストレージにユーザーIDを保存
-  if (result.data && result.data.id) {
-    saveUserIdToLocalStorage(result.data.id);
+  if (response.data && response.data.id) {
+    saveUserIdToLocalStorage(response.data.id);
   }
 
-  return result;
+  return response;
 }
 
 /**
- * ユーザー取得関数
- * @param userId ユーザーID
+ * ユーザー情報取得関数
+ * @param userId ユーザーID（省略時は自分自身）
+ * @returns ユーザー情報
  */
 export async function fetchUser(userId?: number): Promise<UserResponse> {
-  // ユーザーIDが指定されていない場合はローカルストレージから取得
-  const id = userId || getUserIdFromLocalStorage();
+  if (!userId) {
+    const currentUserId = getUserIdFromLocalStorage();
 
-  if (!id) {
-    return {
-      error: 'エラーが発生しました',
-      status: 400
-    };
+    if (!currentUserId) {
+      return createUserIdError<UserResponse>();
+    }
+
+    userId = currentUserId;
   }
 
-  return fetchApi<UserResponse>(`${API_BASE_URL}/${id}`);
+  return fetchApi<UserResponse>(`${API_BASE_URL}/${userId}`);
+}
+
+/**
+ * ユーザー一覧取得関数
+ * @param page ページ番号（1始まり、デフォルト1）
+ * @param limit 1ページあたりの件数（デフォルト10、最大50）
+ * @returns ユーザー一覧
+ */
+export async function fetchUsers(
+  page: number = 1,
+  limit: number = 10
+): Promise<UsersResponse> {
+  const userId = getUserIdFromLocalStorage();
+
+  if (!userId) {
+    return createUserIdError<UsersResponse>();
+  }
+
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString()
+  });
+
+  return fetchApi<UsersResponse>(`${API_BASE_URL}?${queryParams.toString()}`);
 }
 
 /**
  * ユーザー情報更新関数
- * @param userId ユーザーID
  * @param userData 更新するユーザー情報
+ * @returns 更新結果
  */
-export async function updateUser(userId?: number, userData?: UpdateUserRequest): Promise<UserResponse> {
-  // ユーザーIDが指定されていない場合はローカルストレージから取得
-  const id = userId || getUserIdFromLocalStorage();
+export async function updateUser(userData: UpdateUserRequest): Promise<UserResponse> {
+  const userId = getUserIdFromLocalStorage();
 
-  if (!id) {
-    return {
-      error: 'エラーが発生しました',
-      status: 400
-    };
+  if (!userId) {
+    return createUserIdError<UserResponse>();
   }
 
-  // クライアント側での詳細バリデーションは削除
-
-  return patchApi<UserResponse>(`${API_BASE_URL}/${id}`, userData || {});
+  return patchApi<UserResponse>(`${API_BASE_URL}/${userId}`, userData);
 }
 
 /**

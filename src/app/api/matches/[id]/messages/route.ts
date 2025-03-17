@@ -5,6 +5,7 @@ import {
   createSuccessResponse,
   createErrorResponse,
   createValidationErrorResponse,
+  createNotFoundErrorResponse,
   isValidId,
   logError
 } from '../../../_lib/api-utils';
@@ -49,18 +50,22 @@ export async function POST(
 
     if (matchCheckError) {
       if (matchCheckError.code === 'PGRST116') {
-        return createErrorResponse<Message>('有効なマッチが見つかりません', 404);
+        return createNotFoundErrorResponse<Message>('有効なマッチが見つかりません');
       }
       logError('マッチ確認', matchCheckError);
       return createErrorResponse<Message>('マッチ確認に失敗しました', 500);
     }
 
+    // 数値型に変換（一度だけ行う）
+    const numericMatchId = Number(matchId);
+    const numericFromUserId = Number(from_user_id);
+
     // メッセージを保存
     const { data: message, error } = await supabase
       .from('messages')
       .insert({
-        match_id: parseInt(matchId),
-        from_user_id: parseInt(from_user_id.toString()),
+        match_id: numericMatchId,
+        from_user_id: numericFromUserId,
         content
       })
       .select()
@@ -91,8 +96,8 @@ export async function GET(
     const url = new URL(request.url);
 
     // ページネーションパラメータの取得
-    const limit = parseInt(url.searchParams.get('limit') || '50');
-    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = Number(url.searchParams.get('limit') || '50');
+    const page = Number(url.searchParams.get('page') || '1');
     const offset = (page - 1) * limit;
 
     // パラメータ検証
@@ -120,10 +125,10 @@ export async function GET(
 
     // レスポンスヘッダーにページネーション情報を追加
     const headers = new Headers();
-    headers.append('X-Total-Count', count?.toString() || '0');
-    headers.append('X-Page', page.toString());
-    headers.append('X-Limit', limit.toString());
-    headers.append('X-Total-Pages', Math.ceil((count || 0) / limit).toString());
+    headers.append('X-Total-Count', String(count || 0));
+    headers.append('X-Page', String(page));
+    headers.append('X-Limit', String(limit));
+    headers.append('X-Total-Pages', String(Math.ceil((count || 0) / limit)));
 
     return createSuccessResponse<Message[]>(data || [], 200, headers);
   } catch (error) {

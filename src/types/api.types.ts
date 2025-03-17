@@ -6,16 +6,28 @@ import { Like, Match, Message, RecruitingUser, User } from './database.types';
 export type ApiResponse<T> = {
   data?: T;
   error?: string;
+  errorCode?: string;
   status: number;
+};
+
+/**
+ * ユーザー作成リクエスト
+ */
+export type CreateUserRequest = {
+  nickname: string;
+  grade: string;
+  department: string;
+  end_time?: string | null;
+  place?: string | null;
 };
 
 /**
  * ユーザープロフィール・ステータス更新リクエスト
  */
 export type UpdateUserRequest = {
-  nickname: string;
-  grade: string;
-  department: string;
+  nickname?: string;
+  grade?: string;
+  department?: string;
   end_time?: string | null;
   place?: string | null;
 };
@@ -32,8 +44,8 @@ export type CreateLikeRequest = {
  * マッチング生成リクエスト
  */
 export type CreateMatchRequest = {
-  userId1: number;
-  userId2: number;
+  from_user_id: number;
+  to_user_id: number;
 };
 
 /**
@@ -57,6 +69,11 @@ export type SendMessageRequest = {
 export type UserResponse = ApiResponse<User>;
 
 /**
+ * ユーザー一覧取得レスポンス
+ */
+export type UsersResponse = ApiResponse<User[]>;
+
+/**
  * 募集中ユーザー一覧取得レスポンス
  */
 export type RecruitingUsersResponse = ApiResponse<RecruitingUser[]>;
@@ -64,12 +81,17 @@ export type RecruitingUsersResponse = ApiResponse<RecruitingUser[]>;
 /**
  * いいねレスポンス
  */
-export type LikeResponse = ApiResponse<Like | Like[]>;
+export type LikeResponse = ApiResponse<Like>;
 
 /**
  * マッチ取得レスポンス
  */
 export type MatchResponse = ApiResponse<Match>;
+
+/**
+ * マッチ一覧取得レスポンス
+ */
+export type MatchesResponse = ApiResponse<Match[]>;
 
 /**
  * メッセージ送信レスポンス

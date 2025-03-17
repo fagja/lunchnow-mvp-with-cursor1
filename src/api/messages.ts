@@ -6,16 +6,9 @@ import {
 import {
   fetchApi,
   postApi,
-  getUserIdFromLocalStorage
+  getUserIdFromLocalStorage,
+  createUserIdError
 } from './api-client';
-
-/**
- * ユーザーIDが存在しない場合のエラーレスポンスを生成
- */
-const createUserIdError = (): MessageResponse => ({
-  error: 'ユーザーIDが取得できません。再度ログインしてください。',
-  status: 401
-});
 
 /**
  * メッセージ送信関数
@@ -30,7 +23,7 @@ export async function sendMessage(
   const userId = getUserIdFromLocalStorage();
 
   if (!userId) {
-    return createUserIdError();
+    return createUserIdError<MessageResponse>();
   }
 
   const messageData: SendMessageRequest = {
@@ -56,7 +49,7 @@ export async function fetchMessages(
   const userId = getUserIdFromLocalStorage();
 
   if (!userId) {
-    return createUserIdError();
+    return createUserIdError<MessagesResponse>();
   }
 
   const queryParams = new URLSearchParams({

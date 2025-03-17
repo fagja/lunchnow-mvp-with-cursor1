@@ -5,6 +5,7 @@ import {
   createSuccessResponse,
   createErrorResponse,
   createValidationErrorResponse,
+  createConflictErrorResponse,
   isValidId,
   logError
 } from '../_lib/api-utils';
@@ -24,15 +25,19 @@ export async function POST(request: NextRequest) {
       return createValidationErrorResponse<Match>('パラメータエラー');
     }
 
+    // 数値型に変換（一度だけ行う）
+    const numericUserId1 = Number(userId1);
+    const numericUserId2 = Number(userId2);
+
     // 自分自身とのマッチングを防止
-    if (parseInt(userId1) === parseInt(userId2)) {
+    if (numericUserId1 === numericUserId2) {
       return createValidationErrorResponse<Match>('自分自身とはマッチングできません');
     }
 
     // トランザクション内でマッチング登録処理を実行
     const { data: match, error } = await supabase.rpc('create_match', {
-      p_user_id_1: parseInt(userId1),
-      p_user_id_2: parseInt(userId2)
+      p_user_id_1: numericUserId1,
+      p_user_id_2: numericUserId2
     });
 
     if (error) {
@@ -40,7 +45,7 @@ export async function POST(request: NextRequest) {
 
       // 既存マッチ制約エラーの場合は専用メッセージ
       if (error.code === '23505') {
-        return createErrorResponse<Match>('ユーザーは既にマッチング中です', 409);
+        return createConflictErrorResponse<Match>('ユーザーは既にマッチング中です');
       }
 
       return createErrorResponse<Match>('マッチング登録に失敗しました', 500);
