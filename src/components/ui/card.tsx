@@ -2,6 +2,13 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * カードコンポーネント
+ * ユーザー情報やコンテンツを表示するための枠組みを提供します。
+ *
+ * @param className - 追加のスタイルクラス
+ * @param children - カード内に表示する要素
+ */
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -17,6 +24,13 @@ const Card = React.forwardRef<
 ))
 Card.displayName = "Card"
 
+/**
+ * カードヘッダーコンポーネント
+ * カードの上部に配置され、タイトルや説明などを含むことが多いです。
+ *
+ * @param className - 追加のスタイルクラス
+ * @param children - ヘッダー内に表示する要素
+ */
 const CardHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -29,6 +43,13 @@ const CardHeader = React.forwardRef<
 ))
 CardHeader.displayName = "CardHeader"
 
+/**
+ * カードタイトルコンポーネント
+ * カードの見出しを表示します。
+ *
+ * @param className - 追加のスタイルクラス
+ * @param children - タイトルとして表示するテキスト
+ */
 const CardTitle = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLHeadingElement>
@@ -44,6 +65,13 @@ const CardTitle = React.forwardRef<
 ))
 CardTitle.displayName = "CardTitle"
 
+/**
+ * カード説明コンポーネント
+ * カードの補足説明を表示します。
+ *
+ * @param className - 追加のスタイルクラス
+ * @param children - 説明として表示するテキスト
+ */
 const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
@@ -56,6 +84,13 @@ const CardDescription = React.forwardRef<
 ))
 CardDescription.displayName = "CardDescription"
 
+/**
+ * カードコンテンツコンポーネント
+ * カードの主要な内容を表示するエリアです。
+ *
+ * @param className - 追加のスタイルクラス
+ * @param children - コンテンツとして表示する要素
+ */
 const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -64,6 +99,13 @@ const CardContent = React.forwardRef<
 ))
 CardContent.displayName = "CardContent"
 
+/**
+ * カードフッターコンポーネント
+ * カードの下部に配置され、アクションボタンなどを含むことが多いです。
+ *
+ * @param className - 追加のスタイルクラス
+ * @param children - フッター内に表示する要素
+ */
 const CardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>

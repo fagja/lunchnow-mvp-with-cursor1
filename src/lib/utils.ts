@@ -172,22 +172,35 @@ export function hasNoSpecialChars(
  * ユーザーIDをLocalStorageに保存する関数
  *
  * @param userId - 保存するユーザーID
+ * @returns 保存に成功した場合true、失敗した場合false
  */
-export function saveUserId(userId: number): void {
+export function saveUserId(userId: number): boolean {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(localStorageKeys.USER_ID, userId.toString());
+    try {
+      localStorage.setItem(localStorageKeys.USER_ID, userId.toString());
+      return true;
+    } catch (error) {
+      console.error('ユーザーIDの保存に失敗しました:', error);
+      return false;
+    }
   }
+  return false;
 }
 
 /**
  * LocalStorageからユーザーIDを取得する関数
  *
- * @returns 保存されたユーザーID、存在しない場合はnull
+ * @returns 保存されたユーザーID、存在しない場合または取得に失敗した場合はnull
  */
 export function getUserId(): number | null {
   if (typeof window !== 'undefined') {
-    const userId = localStorage.getItem(localStorageKeys.USER_ID);
-    return userId ? parseInt(userId, 10) : null;
+    try {
+      const userId = localStorage.getItem(localStorageKeys.USER_ID);
+      return userId ? parseInt(userId, 10) : null;
+    } catch (error) {
+      console.error('ユーザーIDの取得に失敗しました:', error);
+      return null;
+    }
   }
   return null;
 }
@@ -197,15 +210,19 @@ export function getUserId(): number | null {
  *
  * @param key - 設定のキー
  * @param value - 保存する値
+ * @returns 保存に成功した場合true、失敗した場合false
  */
-export function saveSettings<T>(key: string, value: T): void {
+export function saveSettings<T>(key: string, value: T): boolean {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+      return true;
     } catch (error) {
-      console.error('設定の保存に失敗しました:', error);
+      console.error(`設定[${key}]の保存に失敗しました:`, error);
+      return false;
     }
   }
+  return false;
 }
 
 /**
@@ -213,7 +230,7 @@ export function saveSettings<T>(key: string, value: T): void {
  *
  * @param key - 設定のキー
  * @param defaultValue - デフォルト値
- * @returns 保存された設定値、存在しない場合はデフォルト値
+ * @returns 保存された設定値、存在しない場合または取得に失敗した場合はデフォルト値
  */
 export function getSettings<T>(key: string, defaultValue: T): T {
   if (typeof window !== 'undefined') {
@@ -221,7 +238,7 @@ export function getSettings<T>(key: string, defaultValue: T): T {
       const value = localStorage.getItem(key);
       return value ? JSON.parse(value) : defaultValue;
     } catch (error) {
-      console.error('設定の取得に失敗しました:', error);
+      console.error(`設定[${key}]の取得に失敗しました:`, error);
       return defaultValue;
     }
   }
