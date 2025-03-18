@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ErrorMessageProps {
-  error: string | null;
+  error: string | null | { code: string; message: string };
   className?: string;
 }
 
@@ -13,6 +13,9 @@ interface ErrorMessageProps {
 export function ErrorMessage({ error, className }: ErrorMessageProps) {
   if (!error) return null;
 
+  // エラーがオブジェクトの場合はメッセージプロパティを使用
+  const errorMessage = typeof error === 'object' ? error.message : error;
+
   return (
     <div
       className={cn(
@@ -22,7 +25,7 @@ export function ErrorMessage({ error, className }: ErrorMessageProps) {
       role="alert"
       aria-live="assertive"
     >
-      {error}
+      {errorMessage}
     </div>
   );
 }

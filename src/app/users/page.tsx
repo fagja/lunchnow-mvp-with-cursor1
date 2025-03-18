@@ -77,7 +77,11 @@ export default function UsersPage() {
       const response = await createLike(userId);
 
       if (response.error) {
-        setError(response.error);
+        // エラーメッセージがオブジェクトの場合、message プロパティを使用
+        const errorMessage = typeof response.error === 'object' && response.error.message
+          ? response.error.message
+          : response.error;
+        setError(errorMessage);
         return;
       }
 

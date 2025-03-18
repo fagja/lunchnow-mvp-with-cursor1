@@ -47,6 +47,11 @@ export async function POST(request: NextRequest) {
         return createErrorResponse<Like>('すでにいいねしています', 409);
       }
 
+      // 外部キー制約違反の場合（ユーザーが存在しない）
+      if (error.code === '23503') {
+        return createErrorResponse<Like>('指定されたユーザーが見つかりません。ユーザー登録が正しく行われているか確認してください。', 404);
+      }
+
       return createErrorResponse<Like>('エラーが発生しました', 500);
     }
 
