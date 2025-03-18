@@ -1,12 +1,33 @@
-import { Like, Match, Message, RecruitingUser, User } from './database.types';
+import { Like, Match, Message, RecruitingUser, User, MatchedUser } from './database.types';
+
+/**
+ * APIエラーコード型
+ * アプリケーション全体で発生しうるエラーの種類を定義
+ */
+export type ApiErrorCode =
+  | 'validation_error'   // バリデーションエラー
+  | 'not_found'          // リソースが見つからない
+  | 'unauthorized_error' // 認証エラー
+  | 'forbidden_error'    // 権限不足
+  | 'conflict_error'     // 競合エラー
+  | 'network_error'      // ネットワークエラー
+  | 'timeout_error'      // タイムアウトエラー
+  | 'general_error';     // その他の一般エラー
+
+/**
+ * APIエラー情報型
+ */
+export type ApiError = {
+  code: ApiErrorCode;
+  message: string;
+};
 
 /**
  * API共通レスポンス型
  */
 export type ApiResponse<T> = {
   data?: T;
-  error?: string;
-  errorCode?: string;
+  error?: ApiError | string;
   status: number;
 };
 
@@ -102,3 +123,8 @@ export type MessageResponse = ApiResponse<Message>;
  * メッセージ履歴取得レスポンス
  */
 export type MessagesResponse = ApiResponse<Message[]>;
+
+/**
+ * マッチしたユーザー情報レスポンス
+ */
+export type MatchedUserResponse = ApiResponse<MatchedUser>;

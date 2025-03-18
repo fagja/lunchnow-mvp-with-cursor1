@@ -5,8 +5,8 @@ import { User, RecruitingUser, Match, Message } from './database.types';
  */
 export interface UserCardProps {
   user: RecruitingUser;
-  onLike: (userId: number) => void;
-  isLoading?: boolean;
+  onLike: () => void;
+  disabled?: boolean;
 }
 
 /**

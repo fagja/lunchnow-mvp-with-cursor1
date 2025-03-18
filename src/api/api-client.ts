@@ -2,8 +2,9 @@
  * API呼び出し共通関数
  */
 
-import { ApiResponse } from '@/types/api.types';
+import { ApiResponse, ApiError, ApiErrorCode } from '@/types/api.types';
 import { getUserId, saveUserId, localStorageKeys } from '@/lib/utils';
+import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 
 // 拡張フェッチオプション型定義
 type ExtendedFetchOptions = RequestInit & {
@@ -32,10 +33,7 @@ export function saveUserIdToLocalStorage(userId: number): void {
  */
 export function createUserIdError<T>(): ApiResponse<T> {
   return {
-    error: {
-      code: 'unauthorized_error',
-      message: 'ユーザーIDが取得できません。再度ログインしてください。'
-    },
+    error: createApiError('unauthorized_error'),
     status: 401
   };
 }
@@ -69,11 +67,9 @@ export async function fetchApi<T>(url: string, options: ExtendedFetchOptions = {
 
     // HTTPエラーの処理
     if (!response.ok) {
+      const errorCode = getErrorCodeFromStatus(response.status);
       return {
-        error: {
-          code: getErrorCodeFromStatus(response.status),
-          message: getErrorMessageFromStatus(response.status)
-        },
+        error: createApiError(errorCode),
         status: response.status,
       };
     }
@@ -87,11 +83,9 @@ export async function fetchApi<T>(url: string, options: ExtendedFetchOptions = {
     console.error(`API呼び出しエラー (GET ${url}):`, error);
 
     // エラーハンドリング
+    const errorCode: ApiErrorCode = error.name === 'AbortError' ? 'timeout_error' : 'network_error';
     return {
-      error: {
-        code: error.name === 'AbortError' ? 'timeout_error' : 'network_error',
-        message: error.name === 'AbortError' ? 'リクエストがタイムアウトしました' : 'ネットワークエラーが発生しました'
-      },
+      error: createApiError(errorCode),
       status: 500,
     };
   }
@@ -163,11 +157,9 @@ async function sendRequestWithBody<T>(
 
     // HTTPエラーの処理
     if (!response.ok) {
+      const errorCode = getErrorCodeFromStatus(response.status);
       return {
-        error: {
-          code: getErrorCodeFromStatus(response.status),
-          message: getErrorMessageFromStatus(response.status)
-        },
+        error: createApiError(errorCode),
         status: response.status,
       };
     }
@@ -181,20 +173,44 @@ async function sendRequestWithBody<T>(
     console.error(`API呼び出しエラー (${method} ${url}):`, error);
 
     // エラーハンドリング
+    const errorCode: ApiErrorCode = error.name === 'AbortError' ? 'timeout_error' : 'network_error';
     return {
-      error: {
-        code: error.name === 'AbortError' ? 'timeout_error' : 'network_error',
-        message: error.name === 'AbortError' ? 'リクエストがタイムアウトしました' : 'ネットワークエラーが発生しました'
-      },
+      error: createApiError(errorCode),
       status: 500,
     };
   }
 }
 
 /**
- * HTTPステータスコードからエラーコードを取得
+ * APIエラーオブジェクトを作成
  */
-function getErrorCodeFromStatus(status: number): string {
+function createApiError(code: ApiErrorCode): ApiError {
+  const message = getErrorMessageFromCode(code);
+  return { code, message };
+}
+
+/**
+ * エラーコードからメッセージを取得
+ */
+function getErrorMessageFromCode(code: ApiErrorCode): string {
+  switch (code) {
+    case 'validation_error':
+      return API_ERROR_MESSAGES.UNKNOWN_ERROR;
+    case 'network_error':
+      return API_ERROR_MESSAGES.NETWORK_ERROR;
+    case 'timeout_error':
+      return API_ERROR_MESSAGES.TIMEOUT_ERROR;
+    case 'not_found':
+      return '指定されたリソースは見つかりません';
+    case 'unauthorized_error':
+      return 'アクセス権限がありません';
+    default:
+      return API_ERROR_MESSAGES.UNKNOWN_ERROR;
+  }
+}
+
+// HTTPステータスコードからエラーコードを取得関数の改善
+function getErrorCodeFromStatus(status: number): ApiErrorCode {
   switch (status) {
     case 400:
       return 'validation_error';
@@ -208,25 +224,5 @@ function getErrorCodeFromStatus(status: number): string {
       return 'conflict_error';
     default:
       return 'general_error';
-  }
-}
-
-/**
- * HTTPステータスコードからエラーメッセージを取得
- */
-function getErrorMessageFromStatus(status: number): string {
-  switch (status) {
-    case 400:
-      return '入力内容に誤りがあります';
-    case 401:
-      return '認証に失敗しました';
-    case 403:
-      return 'アクセス権限がありません';
-    case 404:
-      return 'リソースが見つかりません';
-    case 409:
-      return 'リソースが競合しています';
-    default:
-      return 'エラーが発生しました';
   }
 }

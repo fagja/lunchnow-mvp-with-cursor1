@@ -23,7 +23,7 @@ const API_BASE_URL = '/api/users';
  * @param userData ユーザー情報
  * @returns 登録結果
  */
-export async function registerUser(userData: CreateUserRequest): Promise<UserResponse> {
+export async function registerUser(userData: UpdateUserRequest): Promise<UserResponse> {
   const response = await postApi<UserResponse>(API_BASE_URL, userData);
 
   if (response.data && response.data.id) {
