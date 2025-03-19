@@ -62,8 +62,6 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false }: P
     // 現在時刻から選択肢を生成
     const options = generateEndTimeOptions();
     setEndTimeOptions(options);
-
-    // 初期値のデフォルト設定を削除し、ユーザーに選択を促す
   }, []);
 
   // 入力値の変更を処理

@@ -34,6 +34,14 @@ interface ChatPollingOptions {
    * 初回即時実行するかどうか（デフォルト: true）
    */
   immediate?: boolean;
+  /**
+   * エラーを表示するかどうか（デフォルト: false）
+   */
+  showError?: boolean;
+  /**
+   * エラーの自動非表示時間（ミリ秒）
+   */
+  errorAutoHideTimeout?: number;
 }
 
 /**
@@ -48,8 +56,8 @@ interface ChatPollingOptions {
  * @returns ポーリング状態と制御関数、最新メッセージ
  */
 export function useChatPolling(
-  matchId: number | null | undefined,
-  currentMatchId: number | null | undefined,
+  matchId: number | null,
+  currentMatchId: number | null,
   options: ChatPollingOptions = {}
 ) {
   const {
@@ -59,6 +67,8 @@ export function useChatPolling(
     onError,
     detectVisibility = true,
     immediate = true,
+    showError = false, // デフォルトでUIにエラーを表示しない
+    errorAutoHideTimeout = 5000,
   } = options;
 
   // メッセージの状態
@@ -69,7 +79,7 @@ export function useChatPolling(
   // ポーリング用のデータ取得関数
   const fetchChatData = useCallback(async () => {
     // マッチIDがない場合は実行しない
-    if (!matchId) {
+    if (matchId === null) {
       return { messages: [], canceled: false };
     }
 
@@ -106,16 +116,13 @@ export function useChatPolling(
 
       return { messages: [], canceled: false };
     } catch (error) {
-      if (onError) {
-        onError(error instanceof Error ? error : new Error(API_ERROR_MESSAGES.UNKNOWN_ERROR));
-      }
       throw error;
     }
-  }, [matchId, currentMatchId, onNewMessages, onMatchCanceled, onError]);
+  }, [matchId, currentMatchId, onNewMessages, onMatchCanceled]);
 
   // マッチ状態を確認する条件
   const isPollingEnabled = useCallback(() => {
-    return !!matchId;
+    return matchId !== null;
   }, [matchId]);
 
   // マッチキャンセルを判定する停止条件
@@ -133,6 +140,9 @@ export function useChatPolling(
     detectVisibility,
     enabled: isPollingEnabled(),
     stopCondition,
+    showError,
+    errorAutoHideTimeout,
+    onError,
   });
 
   return {

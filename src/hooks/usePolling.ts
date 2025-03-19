@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
+import { useErrorHandler } from './useErrorHandler';
 
 /**
  * ポーリングのオプション型定義
@@ -19,6 +20,12 @@ interface PollingOptions<T> {
   retryInterval?: number;
   /** 条件が満たされた場合に自動的にポーリングを停止する */
   stopCondition?: (data: T) => boolean;
+  /** エラーを表示するかどうか（デフォルト: true） */
+  showError?: boolean;
+  /** エラーの自動非表示時間（ミリ秒） */
+  errorAutoHideTimeout?: number;
+  /** エラー発生時のコールバック */
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -59,7 +66,17 @@ export function usePolling<T>(
     maxAttempts,
     retryInterval = interval * 2,
     stopCondition,
+    showError = true,
+    errorAutoHideTimeout = 5000,
+    onError,
   } = options;
+  
+  // エラーハンドラーの初期化
+  const errorHandler = useErrorHandler({
+    showError,
+    autoHideTimeout: errorAutoHideTimeout,
+    onError,
+  });
 
   // 状態の初期化
   const [state, setState] = useState<PollingState<T>>({
@@ -142,9 +159,11 @@ export function usePolling<T>(
 
         hasErrorRef.current = true;
 
+        const normalizedError = errorHandler.handleError(error);
+        
         setState((prev) => ({
           ...prev,
-          error: error instanceof Error ? error : new Error(API_ERROR_MESSAGES.UNKNOWN_ERROR),
+          error: normalizedError,
           isLoading: false,
         }));
 
@@ -168,7 +187,7 @@ export function usePolling<T>(
 
     // 通常間隔のポーリングを開始
     intervalRef.current = setInterval(executePoll, interval);
-  }, [fetchFn, interval, immediate, detectVisibility, enabled, maxAttempts, retryInterval, stopCondition, stopPolling, state.attempts]);
+  }, [fetchFn, interval, immediate, detectVisibility, enabled, maxAttempts, retryInterval, stopCondition, stopPolling, state.attempts, errorHandler]);
 
   // 手動実行関数
   const refetch = useCallback(async () => {
@@ -189,15 +208,17 @@ export function usePolling<T>(
       return result;
     } catch (error) {
       if (isMountedRef.current) {
+        const normalizedError = errorHandler.handleError(error);
+        
         setState((prev) => ({
           ...prev,
-          error: error instanceof Error ? error : new Error(API_ERROR_MESSAGES.UNKNOWN_ERROR),
+          error: normalizedError,
           isLoading: false,
         }));
       }
       throw error;
     }
-  }, [fetchFn]);
+  }, [fetchFn, errorHandler]);
 
   // リセット関数
   const reset = useCallback(() => {
@@ -210,7 +231,8 @@ export function usePolling<T>(
       lastUpdated: null,
       attempts: 0,
     });
-  }, [stopPolling]);
+    errorHandler.resetError();
+  }, [stopPolling, errorHandler]);
 
   // ページの可視性変更を検出する
   useEffect(() => {
@@ -274,5 +296,7 @@ export function usePolling<T>(
     stopPolling,
     refetch,
     reset,
+    hideError: errorHandler.hideError,
+    resetError: errorHandler.resetError,
   };
 }

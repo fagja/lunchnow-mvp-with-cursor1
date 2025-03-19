@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 import { MatchedUser } from '@/types/database.types';
 import { fetchCurrentMatch } from '@/api/matches';
-import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 
 /**
  * マッチング状態ポーリングのオプション型定義
@@ -33,6 +32,14 @@ interface MatchPollingOptions {
    * マッチング成立時に自動的にポーリングを停止するかどうか（デフォルト: true）
    */
   stopOnMatch?: boolean;
+  /**
+   * エラーを表示するかどうか（デフォルト: false）
+   */
+  showError?: boolean;
+  /**
+   * エラーの自動非表示時間（ミリ秒）
+   */
+  errorAutoHideTimeout?: number;
 }
 
 /**
@@ -51,6 +58,8 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     detectVisibility = true,
     immediate = true,
     stopOnMatch = true,
+    showError = false, // デフォルトでUIにエラーを表示しない
+    errorAutoHideTimeout = 5000,
   } = options;
 
   // マッチング情報の状態
@@ -64,9 +73,9 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
       const matchResponse = await fetchCurrentMatch();
 
       if (matchResponse.error) {
-        throw new Error(typeof matchResponse.error === 'string' 
-          ? matchResponse.error 
-          : matchResponse.error.message || API_ERROR_MESSAGES.UNKNOWN_ERROR);
+        throw new Error(typeof matchResponse.error === 'string'
+          ? matchResponse.error
+          : matchResponse.error.message || '不明なエラーが発生しました');
       }
 
       const match = matchResponse.data;
@@ -75,7 +84,7 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
       setMatchInfo(match);
 
       // マッチングが存在し、前回と異なる場合にコールバックを実行
-      if (match && match.match_id && match.match_id !== lastMatchIdRef.current) {
+      if (match !== null && match.match_id !== null && match.match_id !== lastMatchIdRef.current) {
         lastMatchIdRef.current = match.match_id;
 
         if (onMatchFound) {
@@ -87,18 +96,15 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
 
       return match;
     } catch (error) {
-      if (onError) {
-        onError(error instanceof Error ? error : new Error(API_ERROR_MESSAGES.UNKNOWN_ERROR));
-      }
       throw error;
     }
-  }, [onMatchFound, onError]);
+  }, [onMatchFound]);
 
   // マッチング成立を判定する停止条件
   const stopCondition = useCallback(
     (data: MatchedUser | null) => {
       // stopOnMatchが有効で、かつマッチングが存在する場合
-      return stopOnMatch && !!data && !!data.match_id;
+      return stopOnMatch && data !== null && data.match_id !== null;
     },
     [stopOnMatch]
   );
@@ -109,6 +115,9 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     immediate,
     detectVisibility,
     stopCondition,
+    showError,
+    errorAutoHideTimeout,
+    onError,
   });
 
   return {
