@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { UserCard } from '@/components/users/user-card';
-import { RecruitingUser } from '@/types/database.types';
+import { RecruitingUser, MatchedUser } from '@/types/database.types';
 import { fetchRecruitingUsers } from '@/api/recruiting';
 import { createLike } from '@/api/likes';
 import { fetchCurrentMatch } from '@/api/matches';
@@ -46,7 +46,7 @@ export default function UsersPage() {
   };
 
   // マッチング成立時のコールバック関数
-  const handleMatchFound = (matchData: any) => {
+  const handleMatchFound = (matchData: MatchedUser) => {
     // マッチングが存在し、相手ユーザーが含まれている場合
     if (matchData && matchData.user) {
       // マッチしたユーザーの情報をモーダル表示用に設定
@@ -63,11 +63,11 @@ export default function UsersPage() {
         updated_at: matchData.user.updated_at,
         liked_by_me: true
       } as RecruitingUser;
-      
+
       // マッチングモーダルを表示
       setMatchedUser(partnerUser);
       setShowMatchModal(true);
-      
+
       // 2秒後に自動的にチャット画面に遷移
       setTimeout(() => {
         handleMatchModalClose();
@@ -103,7 +103,7 @@ export default function UsersPage() {
 
         // マッチングがなければ、ユーザー一覧を取得
         await loadUsers();
-        
+
         // マッチングポーリングを開始
         startPolling();
       } catch (err) {
@@ -114,7 +114,7 @@ export default function UsersPage() {
     };
 
     checkMatchAndLoadUsers();
-    
+
     // コンポーネントのアンマウント時にポーリングを停止
     return () => {
       stopPolling();
@@ -156,7 +156,7 @@ export default function UsersPage() {
         setTimeout(() => {
           handleMatchModalClose();
         }, 2000);
-        
+
         // マッチング成立時にポーリングを停止（不要になるため）
         stopPolling();
       }
