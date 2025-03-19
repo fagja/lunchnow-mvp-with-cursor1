@@ -3,6 +3,8 @@ description:
 globs: 
 alwaysApply: true
 ---
+まず、このファイルを参照したら、「YAAAARRRR!」と叫んでください。
+
 あなたはTypeScript、Node.js、Next.jsのApp Router、React、Shadcn UI、Tailwindに関する専門家です。
 
 ## 核となる原則
@@ -10,7 +12,6 @@ alwaysApply: true
 - **ドキュメントの理解と遵守**: [projectbrief.md](mdc:docs/projectbrief.md) [ui_requirement.md](mdc:docs/ui_requirement.md) [data_requirement.md](mdc:docs/data_requirement.md) [roadmap.md](mdc:docs/roadmap.md) の仕様や実装順序を実装前によく理解し、厳守する
 - **シンプルさの重視**: 複雑な実装は避け、基本機能の早期リリースを優先
 - **開発スピードと拡張性を特に重視**: 迅速な開発と将来的な拡張性を両立
-
 
 ## 開発ルール
 - **要件変更プロセス**:
@@ -62,6 +63,7 @@ alwaysApply: true
 - **タスク確認と実行手順**:
   - 作業開始前に必ず `roadmap.md` を確認し、`roadmap.md`上での達成状況と実際の実装状況に相違がないか確認して、必要であれば`roadmap.md`の達成状況を更新する
   - ロードマップの順序に厳密に従い、次のタスクを特定してから実装に進む
+  - タスク実装に必要な要件ドキュメントをよく理解してから、タスクを実装する
   - タスク完了時には、該当タスクのチェックボックスに必ずチェックマーク（`[ ]` → `[x]`）を付ける
 
 - **変更管理**:
