@@ -4,7 +4,7 @@ import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 /**
  * ポーリングのオプション型定義
  */
-interface PollingOptions {
+interface PollingOptions<T> {
   /** ポーリング間隔（ミリ秒） */
   interval: number;
   /** 初回即時実行するかどうか（デフォルト: true） */
@@ -18,7 +18,7 @@ interface PollingOptions {
   /** エラー時のリトライ間隔（ミリ秒）（デフォルト: 通常間隔の2倍） */
   retryInterval?: number;
   /** 条件が満たされた場合に自動的にポーリングを停止する */
-  stopCondition?: (data: any) => boolean;
+  stopCondition?: (data: T) => boolean;
 }
 
 /**
@@ -48,7 +48,7 @@ interface PollingState<T> {
  */
 export function usePolling<T>(
   fetchFn: () => Promise<T>,
-  options: PollingOptions
+  options: PollingOptions<T>
 ) {
   // デフォルトオプションの設定
   const {

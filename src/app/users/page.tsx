@@ -12,6 +12,7 @@ import { Modal } from '@/components/ui/modal';
 import { RECRUITING_EXPIRY_MINUTES } from '@/constants/app-settings';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { useMatchPolling } from './hooks/useMatchPolling';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -44,6 +45,48 @@ export default function UsersPage() {
     }
   };
 
+  // マッチング成立時のコールバック関数
+  const handleMatchFound = (matchData: any) => {
+    // マッチングが存在し、相手ユーザーが含まれている場合
+    if (matchData && matchData.user) {
+      // マッチしたユーザーの情報をモーダル表示用に設定
+      const partnerUser = {
+        id: matchData.user.id,
+        nickname: matchData.user.nickname,
+        grade: matchData.user.grade,
+        department: matchData.user.department,
+        end_time: matchData.user.end_time,
+        place: matchData.user.place,
+        is_matched: true,
+        recruiting_since: matchData.user.recruiting_since,
+        created_at: matchData.user.created_at,
+        updated_at: matchData.user.updated_at,
+        liked_by_me: true
+      } as RecruitingUser;
+      
+      // マッチングモーダルを表示
+      setMatchedUser(partnerUser);
+      setShowMatchModal(true);
+      
+      // 2秒後に自動的にチャット画面に遷移
+      setTimeout(() => {
+        handleMatchModalClose();
+      }, 2000);
+    }
+  };
+
+  // マッチング検出用ポーリングを設定
+  const { startPolling, stopPolling } = useMatchPolling({
+    interval: 7000, // 7秒間隔でポーリング
+    onMatchFound: handleMatchFound,
+    onError: (err) => {
+      console.error('マッチングポーリングエラー:', err);
+      // UI上にはエラーを表示しない（ユーザーエクスペリエンスを損なわないため）
+    },
+    detectVisibility: true, // バックグラウンド時に自動停止
+    stopOnMatch: true, // マッチング成立時に自動停止
+  });
+
   // 初回レンダリング時にマッチングを確認し、なければユーザーデータを取得
   useEffect(() => {
     const checkMatchAndLoadUsers = async () => {
@@ -60,6 +103,9 @@ export default function UsersPage() {
 
         // マッチングがなければ、ユーザー一覧を取得
         await loadUsers();
+        
+        // マッチングポーリングを開始
+        startPolling();
       } catch (err) {
         console.error('初期データ取得エラー:', err);
         setError('データの取得に失敗しました。再試行してください。');
@@ -68,7 +114,12 @@ export default function UsersPage() {
     };
 
     checkMatchAndLoadUsers();
-  }, [router]);
+    
+    // コンポーネントのアンマウント時にポーリングを停止
+    return () => {
+      stopPolling();
+    };
+  }, [router, startPolling, stopPolling]);
 
   // 「とりまランチ？」ボタンをクリックした時の処理
   const handleLike = async (userId: number) => {
@@ -105,6 +156,9 @@ export default function UsersPage() {
         setTimeout(() => {
           handleMatchModalClose();
         }, 2000);
+        
+        // マッチング成立時にポーリングを停止（不要になるため）
+        stopPolling();
       }
     } catch (err) {
       console.error('いいね送信エラー:', err);

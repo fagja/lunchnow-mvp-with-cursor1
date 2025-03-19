@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { usePolling } from '@/hooks/usePolling';
-import { MatchedUser } from '@/types/user.types';
+import { MatchedUser } from '@/types/database.types';
 import { fetchCurrentMatch } from '@/api/matches';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 
@@ -64,7 +64,9 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
       const matchResponse = await fetchCurrentMatch();
 
       if (matchResponse.error) {
-        throw new Error(matchResponse.error.message);
+        throw new Error(typeof matchResponse.error === 'string' 
+          ? matchResponse.error 
+          : matchResponse.error.message || API_ERROR_MESSAGES.UNKNOWN_ERROR);
       }
 
       const match = matchResponse.data;
