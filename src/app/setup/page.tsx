@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { ProfileForm } from '@/components/forms/profile-form';
 import { fetchUser, registerUser, updateUser } from '@/api/users';
@@ -13,6 +13,8 @@ import { ErrorMessage } from '@/components/ui/error-message';
 
 export default function SetupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEditMode = searchParams.get('edit') === 'true';
   const [user, setUser] = useState<Partial<User> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,13 +28,14 @@ export default function SetupPage() {
 
         if (userId) {
           const response = await fetchUser(userId);
+
           if (response.data) {
             setUser(response.data);
           }
         }
       } catch (err) {
-        setError(API_ERROR_MESSAGES.NETWORK_ERROR);
         console.error('ユーザー情報取得エラー:', err);
+        setError(API_ERROR_MESSAGES.NETWORK_ERROR);
       } finally {
         setLoading(false);
       }
@@ -67,11 +70,35 @@ export default function SetupPage() {
         router.push('/users');
       }
     } catch (err) {
-      setError(API_ERROR_MESSAGES.NETWORK_ERROR);
       console.error('ユーザー情報保存エラー:', err);
+      setError(API_ERROR_MESSAGES.NETWORK_ERROR);
     } finally {
       setLoading(false);
     }
+  };
+
+  // ユーザーデータとフォーム表示モードを組み合わせた初期データを作成
+  const getInitialFormData = () => {
+    // ユーザーデータがない場合は空オブジェクトを返す
+    if (!user) return {};
+
+    // 編集モードでない場合はプロフィール情報のみを返す
+    if (!isEditMode) {
+      return {
+        nickname: user.nickname || '',
+        grade: user.grade || '',
+        department: user.department || ''
+      };
+    }
+
+    // 編集モードの場合はプロフィール情報とステータス情報の両方を返す
+    return {
+      nickname: user.nickname || '',
+      grade: user.grade || '',
+      department: user.department || '',
+      end_time: user.end_time || '',
+      place: user.place || ''
+    };
   };
 
   return (
@@ -82,9 +109,10 @@ export default function SetupPage() {
         <ErrorMessage error={error} />
 
         <ProfileForm
-          initialData={user || {}}
+          initialData={getInitialFormData()}
           onSubmit={handleSubmit}
           isLoading={loading}
+          isEditMode={isEditMode}
         />
       </div>
     </PageContainer>

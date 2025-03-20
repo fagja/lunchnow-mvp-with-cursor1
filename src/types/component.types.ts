@@ -16,6 +16,7 @@ export interface ProfileFormProps {
   initialData?: Partial<User>;
   onSubmit: (data: Partial<User>) => void;
   isLoading?: boolean;
+  isEditMode?: boolean;
 }
 
 /**
@@ -47,6 +48,7 @@ export interface ModalProps {
   onConfirm?: () => void;
   confirmText?: string;
   cancelText?: string;
+  autoCloseMs?: number;
 }
 
 /**

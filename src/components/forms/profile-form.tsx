@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { generateEndTimeOptions } from '@/lib/date-utils';
 import { GRADE_OPTIONS, DEPARTMENT_OPTIONS, PLACE_OPTIONS } from '@/constants/form-options';
 
-export function ProfileForm({ initialData = {}, onSubmit, isLoading = false }: ProfileFormProps) {
+export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isEditMode = false }: ProfileFormProps) {
   const [formData, setFormData] = useState<Partial<User>>({
     nickname: '',
     grade: '',
@@ -17,6 +17,14 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false }: P
     place: null,
     ...initialData
   });
+
+  // initialDataが変更されたら再設定する
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      ...initialData
+    }));
+  }, [initialData]);
 
   // end_timeの選択肢を生成
   const [endTimeOptions, setEndTimeOptions] = useState<Array<{ value: string, label: string }>>([]);

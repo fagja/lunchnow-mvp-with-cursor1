@@ -210,12 +210,12 @@ export default function UsersPage() {
 
     // 状態更新と遷移のタイミングを確保
     Promise.resolve().then(() => {
-      // router.pushが確実に動作するように
-      router.push('/setup');
+      // edit=trueパラメータを追加して、編集モードで開く
+      router.push('/setup?edit=true');
     }).catch(err => {
       console.error('遷移中にエラーが発生しました:', err);
       // フォールバック
-      window.location.href = '/setup';
+      window.location.href = '/setup?edit=true';
     });
   };
 
