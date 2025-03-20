@@ -1,7 +1,7 @@
 import useSWR, { SWRConfiguration, SWRResponse } from 'swr';
-import { fetchApi, postApi, patchApi, deleteApi, getUserIdFromLocalStorage } from '@/api/api-client';
+import { fetchApi, postApi, patchApi, deleteApi } from '@/api/api-client';
 import { ApiResponse } from '@/types/api.types';
-import { getUserId } from '@/lib/utils';
+import { validateUserId } from '@/lib/storage-utils';
 
 /**
  * SWRフェッチャー関数の型定義
@@ -121,20 +121,6 @@ export async function apiDelete<T>(
     headers: options.headers,
     timeout: options.timeout,
   });
-}
-
-/**
- * ユーザーIDが必要なAPIリクエストを送信する前に、ユーザーIDの存在を確認する関数
- *
- * @returns ユーザーID、存在しない場合はnull
- */
-export function checkUserIdBeforeRequest(): number | null {
-  const userId = getUserId();
-  if (!userId) {
-    console.error('ユーザーIDが存在しません。');
-    return null;
-  }
-  return userId;
 }
 
 /**

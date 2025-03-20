@@ -3,29 +3,13 @@
  */
 
 import { ApiResponse, ApiError, ApiErrorCode } from '@/types/api.types';
-import { getUserId, saveUserId, localStorageKeys } from '@/lib/utils';
+import { getUserId, saveUserId, validateUserId, localStorageKeys } from '@/lib/storage-utils';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 
 // 拡張フェッチオプション型定義
 type ExtendedFetchOptions = RequestInit & {
   timeout?: number;
 };
-
-/**
- * LocalStorageからユーザーIDを取得
- * @returns ユーザーID（存在しない場合はnull）
- */
-export function getUserIdFromLocalStorage(): number | null {
-  return getUserId();
-}
-
-/**
- * LocalStorageにユーザーIDを保存
- * @param userId ユーザーID
- */
-export function saveUserIdToLocalStorage(userId: number): void {
-  saveUserId(userId);
-}
 
 /**
  * ユーザーIDが存在しない場合のエラーレスポンスを生成

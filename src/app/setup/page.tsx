@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { ProfileForm } from '@/components/forms/profile-form';
 import { fetchUser, registerUser, updateUser } from '@/api/users';
-import { getUserIdFromLocalStorage } from '@/api/api-client';
+import { getUserId } from '@/lib/storage-utils';
 import { UpdateUserRequest } from '@/types/api.types';
 import { User } from '@/types/database.types';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
@@ -22,7 +22,7 @@ export default function SetupPage() {
     async function loadUserData() {
       try {
         setLoading(true);
-        const userId = getUserIdFromLocalStorage();
+        const userId = getUserId();
 
         if (userId) {
           const response = await fetchUser(userId);
@@ -31,7 +31,8 @@ export default function SetupPage() {
           }
         }
       } catch (err) {
-        setError(API_ERROR_MESSAGES.FETCH_USER);
+        setError(API_ERROR_MESSAGES.NETWORK_ERROR);
+        console.error('ユーザー情報取得エラー:', err);
       } finally {
         setLoading(false);
       }
@@ -44,40 +45,30 @@ export default function SetupPage() {
   const handleSubmit = async (data: Partial<User>) => {
     try {
       setLoading(true);
-      setError(null);
-
-      const userId = getUserIdFromLocalStorage();
-      const userData: UpdateUserRequest = {
-        nickname: data.nickname,
-        grade: data.grade,
-        department: data.department,
-        end_time: data.end_time,
-        place: data.place
-      };
-
+      const userId = getUserId();
       let response;
 
       if (userId) {
         // 既存ユーザーの更新
-        response = await updateUser(userData);
+        response = await updateUser({
+          ...data as UpdateUserRequest
+        });
       } else {
         // 新規ユーザーの登録
-        response = await registerUser(userData);
+        response = await registerUser({
+          ...data as UpdateUserRequest
+        });
       }
 
       if (response.error) {
-        // エラーメッセージがオブジェクトの場合、message プロパティを使用
-        const errorMessage = typeof response.error === 'object' && response.error.message
-          ? response.error.message
-          : response.error;
-        setError(errorMessage);
-        return;
+        setError(response.error);
+      } else {
+        // 成功時はユーザー一覧ページへ
+        router.push('/users');
       }
-
-      // 成功したらユーザー一覧画面へリダイレクト
-      router.push('/users');
     } catch (err) {
-      setError(API_ERROR_MESSAGES.SAVE_USER);
+      setError(API_ERROR_MESSAGES.NETWORK_ERROR);
+      console.error('ユーザー情報保存エラー:', err);
     } finally {
       setLoading(false);
     }
