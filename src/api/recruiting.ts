@@ -1,27 +1,56 @@
 import { RecruitingUsersResponse } from '@/types/api.types';
-import { fetchApi } from './api-client';
+import { fetchApi, createUserIdError } from './api-client';
 import { getUserId, validateUserId } from '@/lib/storage-utils';
 
 /**
  * APIのベースURL
  */
-const API_BASE_URL = '/api/recruiting';
+const API_BASE_URL = '/api/users/recruiting';
+
+/**
+ * 募集中ユーザー一覧取得の基本関数
+ * URLとオプションを指定して募集中ユーザーを取得
+ *
+ * @param url カスタムURL（指定されていない場合は標準URLを使用）
+ * @param options fetchオプション
+ * @returns 募集中ユーザー一覧
+ */
+async function fetchRecruitingUsersBase(
+  url?: string,
+  options?: RequestInit
+): Promise<RecruitingUsersResponse> {
+  const currentUserId = getUserId();
+
+  if (!currentUserId) {
+    return createUserIdError();
+  }
+
+  // URLが指定されている場合はそのまま使用、ない場合は生成
+  const apiUrl = url || `${API_BASE_URL}?currentUserId=${currentUserId}`;
+
+  // デバッグ用にURLをログ出力
+  console.log('【デバッグ】API呼び出しURL:', apiUrl);
+  console.log('【デバッグ】currentUserId:', currentUserId);
+
+  try {
+    const response = await fetchApi<RecruitingUsersResponse['data']>(apiUrl, options);
+    console.log('【デバッグ】API応答:', response);
+    return response;
+  } catch (error) {
+    console.error('【デバッグ】募集中ユーザー取得エラー:', error);
+    return {
+      error: 'エラーが発生しました',
+      status: 500
+    };
+  }
+}
 
 /**
  * 募集中ユーザー一覧取得関数
  * @returns 募集中ユーザー一覧
  */
 export async function fetchRecruitingUsers(): Promise<RecruitingUsersResponse> {
-  const currentUserId = getUserId();
-
-  if (!currentUserId) {
-    return {
-      error: 'ユーザーIDが取得できません。再度ログインしてください。',
-      status: 401
-    };
-  }
-
-  return fetchApi<RecruitingUsersResponse>(`${API_BASE_URL}/users?currentUserId=${currentUserId}`);
+  return fetchRecruitingUsersBase();
 }
 
 /**
@@ -39,14 +68,11 @@ export async function fetchRecentRecruitingUsers(
   const currentUserId = getUserId();
 
   if (!currentUserId) {
-    return {
-      error: 'ユーザーIDが取得できません。再度ログインしてください。',
-      status: 401
-    };
+    return createUserIdError();
   }
 
-  return fetchApi<RecruitingUsersResponse>(
-    `${API_BASE_URL}/users/recent?currentUserId=${currentUserId}&minutes=${minutes}`
+  return fetchRecruitingUsersBase(
+    `${API_BASE_URL}/recent?currentUserId=${currentUserId}&minutes=${minutes}`
   );
 }
 
@@ -61,31 +87,10 @@ const DEFAULT_CACHE_TIME = 30; // 30秒
  * @param url - SWRによって生成されたキー
  * @returns 募集中ユーザー一覧のレスポンス
  */
-export async function fetchRecruitingUsers(url?: string): Promise<RecruitingUsersResponse> {
-  const currentUserId = getUserId();
-
-  if (!currentUserId) {
-    return {
-      error: 'エラーが発生しました',
-      status: 400
-    };
-  }
-
-  // URLが指定されている場合はそのまま使用、ない場合は生成
-  const apiUrl = url || `${API_BASE_URL}/users?currentUserId=${currentUserId}`;
-
-  try {
-    return await fetchApi<RecruitingUsersResponse>(apiUrl, {
-      // キャッシュ制御ヘッダー設定
-      cache: 'no-cache' // 常に最新データを取得
-    });
-  } catch (error) {
-    console.error('募集中ユーザー取得エラー:', error);
-    return {
-      error: 'エラーが発生しました',
-      status: 500
-    };
-  }
+export async function fetchRecruitingUsersForSwr(url?: string): Promise<RecruitingUsersResponse> {
+  return fetchRecruitingUsersBase(url, {
+    cache: 'no-cache' // 常に最新データを取得
+  });
 }
 
 /**
@@ -96,7 +101,7 @@ export function getRecruitingUsersKey() {
   const currentUserId = getUserId();
   if (!currentUserId) return null;
 
-  return `${API_BASE_URL}/users?currentUserId=${currentUserId}`;
+  return `${API_BASE_URL}?currentUserId=${currentUserId}`;
 }
 
 /**

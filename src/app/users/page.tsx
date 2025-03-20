@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { UserCard } from '@/components/users/user-card';
@@ -22,27 +22,42 @@ export default function UsersPage() {
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUser, setMatchedUser] = useState<RecruitingUser | null>(null);
+  const isMountedRef = useRef(true);
 
   // ユーザーデータを取得する関数
   const loadUsers = async () => {
+    setLoading(true);
+    setError(null);
+
+    console.log('【デバッグ】ユーザーデータ取得開始');
+
     try {
-      setLoading(true);
       const response = await fetchRecruitingUsers();
+      console.log('【デバッグ】fetchRecruitingUsers応答:', response);
 
       if (response.error) {
-        setError(response.error);
-        return;
-      }
+        console.error('【デバッグ】API呼び出しエラー:', response.error, 'ステータス:', response.status);
 
-      setUsers(response.data || []);
-      setLastUpdated(new Date().toLocaleTimeString());
-      setError(null);
+        // HTTP 404エラーの特別処理
+        if (response.status === 404) {
+          console.error('【デバッグ】リソースが見つかりません（404エラー）');
+          setError('データの取得に失敗しました。しばらく待ってから再試行してください。');
+          setUsers([]); // 空の配列を設定して表示を更新
+        } else {
+          setError(response.error);
+        }
+      } else {
+        console.log('【デバッグ】取得ユーザー数:', response.data?.length || 0);
+        setUsers(response.data || []);
+        setLastUpdated(new Date().toLocaleTimeString());
+      }
     } catch (err) {
-      console.error('ユーザー一覧取得エラー:', err);
+      console.error('【デバッグ】ユーザー一覧取得例外:', err);
       setError(API_ERROR_MESSAGES.FETCH_USERS);
-    } finally {
-      setLoading(false);
     }
+
+    console.log('【デバッグ】ユーザーデータ取得完了');
+    setLoading(false);
   };
 
   // マッチング成立時のコールバック関数
@@ -77,7 +92,7 @@ export default function UsersPage() {
 
   // マッチング検出用ポーリングを設定
   const { startPolling, stopPolling } = useMatchPolling({
-    interval: 7000, // 7秒間隔でポーリング
+    interval: 15000, // 15秒間隔でポーリング (7秒から延長)
     onMatchFound: handleMatchFound,
     onError: (err) => {
       console.error('マッチングポーリングエラー:', err);
@@ -90,10 +105,17 @@ export default function UsersPage() {
   // 初回レンダリング時にマッチングを確認し、なければユーザーデータを取得
   useEffect(() => {
     const checkMatchAndLoadUsers = async () => {
+      if (!isMountedRef.current) return;
+
       try {
         setLoading(true);
         // 既存のマッチングがあるか確認
         const matchResponse = await fetchCurrentMatch();
+
+        if (!isMountedRef.current) {
+          setLoading(false);
+          return;
+        }
 
         // マッチングがあれば、チャット画面に遷移
         if (matchResponse.data && matchResponse.data.match_id) {
@@ -105,11 +127,15 @@ export default function UsersPage() {
         await loadUsers();
 
         // マッチングポーリングを開始
-        startPolling();
+        if (isMountedRef.current) {
+          startPolling();
+        }
       } catch (err) {
-        console.error('初期データ取得エラー:', err);
-        setError('データの取得に失敗しました。再試行してください。');
-        setLoading(false);
+        if (isMountedRef.current) {
+          console.error('初期データ取得エラー:', err);
+          setError('データの取得に失敗しました。更新ボタンを押して再試行してください。');
+          setLoading(false);
+        }
       }
     };
 
@@ -117,9 +143,10 @@ export default function UsersPage() {
 
     // コンポーネントのアンマウント時にポーリングを停止
     return () => {
+      isMountedRef.current = false;
       stopPolling();
     };
-  }, [router, startPolling, stopPolling]);
+  }, [router]); // startPolling, stopPollingを依存配列から削除
 
   // 「とりまランチ？」ボタンをクリックした時の処理
   const handleLike = async (userId: number) => {

@@ -70,7 +70,7 @@ export function usePolling<T>(
     errorAutoHideTimeout = 5000,
     onError,
   } = options;
-  
+
   // エラーハンドラーの初期化
   const errorHandler = useErrorHandler({
     showError,
@@ -160,7 +160,7 @@ export function usePolling<T>(
         hasErrorRef.current = true;
 
         const normalizedError = errorHandler.handleError(error);
-        
+
         setState((prev) => ({
           ...prev,
           error: normalizedError,
@@ -209,7 +209,7 @@ export function usePolling<T>(
     } catch (error) {
       if (isMountedRef.current) {
         const normalizedError = errorHandler.handleError(error);
-        
+
         setState((prev) => ({
           ...prev,
           error: normalizedError,
