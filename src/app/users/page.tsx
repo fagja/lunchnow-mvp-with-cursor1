@@ -146,7 +146,7 @@ export default function UsersPage() {
       isMountedRef.current = false;
       stopPolling();
     };
-  }, [router]); // startPolling, stopPollingを依存配列から削除
+  }, []); // routerを依存配列から削除
 
   // 「とりまランチ？」ボタンをクリックした時の処理
   const handleLike = async (userId: number) => {
@@ -203,7 +203,20 @@ export default function UsersPage() {
 
   // プロフィール編集画面に遷移
   const handleEditProfile = () => {
-    router.push('/setup');
+    console.log('プロフィール編集ボタンがクリックされました');
+
+    // 要件定義通り、画面遷移時に明示的にポーリングを停止
+    stopPolling();
+
+    // 状態更新と遷移のタイミングを確保
+    Promise.resolve().then(() => {
+      // router.pushが確実に動作するように
+      router.push('/setup');
+    }).catch(err => {
+      console.error('遷移中にエラーが発生しました:', err);
+      // フォールバック
+      window.location.href = '/setup';
+    });
   };
 
   return (
@@ -212,7 +225,11 @@ export default function UsersPage() {
         {/* ヘッダーセクション */}
         <div className="flex justify-between items-center mb-6">
           <button
-            onClick={handleEditProfile}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleEditProfile();
+            }}
             className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
           >
             プロフィール編集
