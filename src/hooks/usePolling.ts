@@ -1,50 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 import { useErrorHandler } from './useErrorHandler';
-
-/**
- * ポーリングのオプション型定義
- */
-interface PollingOptions<T> {
-  /** ポーリング間隔（ミリ秒） */
-  interval: number;
-  /** 初回即時実行するかどうか（デフォルト: true） */
-  immediate?: boolean;
-  /** 自動的にバックグラウンド検出を行うかどうか（デフォルト: true） */
-  detectVisibility?: boolean;
-  /** 条件付き実行（falseの場合はポーリングを一時停止） */
-  enabled?: boolean;
-  /** 最大試行回数（デフォルト: 無制限） */
-  maxAttempts?: number;
-  /** エラー時のリトライ間隔（ミリ秒）（デフォルト: 通常間隔の2倍） */
-  retryInterval?: number;
-  /** 条件が満たされた場合に自動的にポーリングを停止する */
-  stopCondition?: (data: T) => boolean;
-  /** エラーを表示するかどうか（デフォルト: true） */
-  showError?: boolean;
-  /** エラーの自動非表示時間（ミリ秒） */
-  errorAutoHideTimeout?: number;
-  /** エラー発生時のコールバック */
-  onError?: (error: Error) => void;
-}
-
-/**
- * ポーリングの状態型定義
- */
-interface PollingState<T> {
-  /** 最新のデータ */
-  data: T | null;
-  /** ローディング状態 */
-  isLoading: boolean;
-  /** エラー状態 */
-  error: Error | null;
-  /** ポーリングがアクティブかどうか */
-  isPolling: boolean;
-  /** 最後のデータ取得時刻 */
-  lastUpdated: Date | null;
-  /** 試行回数 */
-  attempts: number;
-}
+import { BasePollingOptions, PollingState, PollingResult } from '@/types/polling';
 
 /**
  * 共通ポーリングユーティリティフック
@@ -55,8 +12,8 @@ interface PollingState<T> {
  */
 export function usePolling<T>(
   fetchFn: () => Promise<T>,
-  options: PollingOptions<T>
-) {
+  options: BasePollingOptions<T>
+): PollingResult<T> {
   // デフォルトオプションの設定
   const {
     interval,

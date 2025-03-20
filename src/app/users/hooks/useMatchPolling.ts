@@ -2,28 +2,16 @@ import { useCallback, useRef, useMemo, useEffect } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 import { MatchedUser } from '@/types/database.types';
 import { fetchCurrentMatch } from '@/api/matches';
+import { BasePollingOptions } from '@/types/polling';
 
 /**
  * マッチング状態ポーリングのオプション型定義
  */
-interface MatchPollingOptions {
-  /**
-   * ポーリング間隔（ミリ秒）
-   * デフォルト: 15000 (15秒)
-   */
-  interval?: number;
+interface MatchPollingOptions extends Partial<Omit<BasePollingOptions<MatchedUser | null>, 'stopCondition'>> {
   /**
    * マッチングが見つかった場合のコールバック関数
    */
   onMatchFound?: (matchData: MatchedUser) => void;
-  /**
-   * エラー発生時のコールバック関数
-   */
-  onError?: (error: Error) => void;
-  /**
-   * 自動的にバックグラウンド検出を行うかどうか（デフォルト: true）
-   */
-  detectVisibility?: boolean;
   /**
    * マッチング成立時に自動的にポーリングを停止するかどうか（デフォルト: true）
    */
@@ -40,14 +28,20 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     interval = 15000,
     detectVisibility = true,
     stopOnMatch = true,
+    onMatchFound,
+    onError,
+    immediate = true,
+    showError = false
   } = options;
 
   // ref経由でオプションとコールバック関数を安定的に管理
-  const onMatchFoundRef = useRef(options.onMatchFound);
-  const onErrorRef = useRef(options.onError);
+  const onMatchFoundRef = useRef(onMatchFound);
+  const onErrorRef = useRef(onError);
   const stopOnMatchRef = useRef(stopOnMatch);
   const intervalRef = useRef(interval);
   const detectVisibilityRef = useRef(detectVisibility);
+  const immediateRef = useRef(immediate);
+  const showErrorRef = useRef(showError);
 
   // 最後に見つかったマッチングIDを追跡
   const lastMatchIdRef = useRef<number | null>(null);
@@ -58,12 +52,14 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
 
   // 参照値を最新に保つ
   useEffect(() => {
-    onMatchFoundRef.current = options.onMatchFound;
-    onErrorRef.current = options.onError;
+    onMatchFoundRef.current = onMatchFound;
+    onErrorRef.current = onError;
     stopOnMatchRef.current = stopOnMatch;
     intervalRef.current = interval;
     detectVisibilityRef.current = detectVisibility;
-  }, [options.onMatchFound, options.onError, stopOnMatch, interval, detectVisibility]);
+    immediateRef.current = immediate;
+    showErrorRef.current = showError;
+  }, [onMatchFound, onError, stopOnMatch, interval, detectVisibility, immediate, showError]);
 
   // マッチングデータを取得する関数 - refで管理して依存配列の問題を回避
   const fetchMatchDataRef = useRef(async () => {
@@ -104,7 +100,8 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
         onMatchFoundRef.current(matchData);
       }
     }
-  }, [currentMatchDataRef.current]); // 依存配列にrefオブジェクトの現在値を入れる
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [/* currentMatchDataRef.current */]); // refオブジェクト自体を依存に入れると無限ループになるためコメントアウト
 
   // 停止条件関数 - refで管理して依存配列の問題を回避
   const stopConditionRef = useRef((matchData: MatchedUser | null) => {
@@ -114,10 +111,13 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     return matchFoundRef.current && stopOnMatchRef.current;
   });
 
+  // 安定したfetch関数
+  const stableFetchFn = useCallback(() => fetchMatchDataRef.current(), []);
+
   // ポーリングオプションをメモ化して安定性を確保し、依存配列を最小化
   const pollingOptions = useMemo(() => ({
     interval: intervalRef.current,
-    immediate: true,
+    immediate: immediateRef.current,
     detectVisibility: detectVisibilityRef.current,
     stopCondition: (data: MatchedUser | null) => stopConditionRef.current(data),
     onError: (error: Error) => {
@@ -126,11 +126,8 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
       }
     },
     // デフォルトでエラーを表示しない
-    showError: false
+    showError: showErrorRef.current
   }), []); // 依存配列を空にして再レンダリング時の再生成を防止
-
-  // 安定したfetch関数
-  const stableFetchFn = useCallback(() => fetchMatchDataRef.current(), []);
 
   // 共通ポーリングフックを使用
   const polling = usePolling<MatchedUser | null>(stableFetchFn, pollingOptions);
