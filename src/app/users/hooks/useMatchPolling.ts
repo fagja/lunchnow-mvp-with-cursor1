@@ -1,4 +1,4 @@
-import { useCallback, useRef, useMemo, useEffect } from 'react';
+import { useCallback, useRef, useMemo, useEffect, useState } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 import { MatchedUser } from '@/types/database.types';
 import { fetchCurrentMatch } from '@/api/matches';
@@ -34,7 +34,8 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     showError = false
   } = options;
 
-  console.log('[useMatchPolling] 初期化', { interval, detectVisibility, stopOnMatch, immediate });
+  // マッチデータをステート管理
+  const [matchData, setMatchData] = useState<MatchedUser | null>(null);
 
   // ref経由でオプションとコールバック関数を安定的に管理
   const onMatchFoundRef = useRef(onMatchFound);
@@ -47,8 +48,6 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
 
   // 最後に見つかったマッチングIDを追跡
   const lastMatchIdRef = useRef<number | null>(null);
-  // 現在のマッチングデータを保持
-  const currentMatchDataRef = useRef<MatchedUser | null>(null);
   // マッチングが見つかったかどうかのフラグ
   const matchFoundRef = useRef<boolean>(false);
 
@@ -63,9 +62,8 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     showErrorRef.current = showError;
   }, [onMatchFound, onError, stopOnMatch, interval, detectVisibility, immediate, showError]);
 
-  // マッチングデータを取得する関数 - refで管理して依存配列の問題を回避
+  // マッチングデータを取得する関数
   const fetchMatchDataRef = useRef(async () => {
-    console.log('[useMatchPolling] マッチングデータ取得開始');
     try {
       const response = await fetchCurrentMatch();
 
@@ -78,115 +76,76 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
       }
 
       // 取得したマッチングデータを保存
-      const matchData = response.data || null;
-      currentMatchDataRef.current = matchData;
+      const fetchedMatchData = response.data || null;
 
-      if (matchData) {
-        console.log('[useMatchPolling] マッチングデータ取得成功:', {
-          matchId: matchData.match_id,
-          userId: matchData.user_id,
-          status: matchData.status
+      // ステート更新
+      setMatchData(fetchedMatchData);
+
+      if (fetchedMatchData && fetchedMatchData.match_id) {
+        console.log('[useMatchPolling] マッチングデータ取得:', {
+          matchId: fetchedMatchData.match_id,
         });
-      } else {
-        console.log('[useMatchPolling] マッチングデータなし');
-        // マッチングがない場合はフラグをリセット
-        matchFoundRef.current = false;
       }
 
-      return matchData;
+      return fetchedMatchData;
     } catch (error) {
       console.error('[useMatchPolling] 例外発生:', error);
       throw error;
     }
   });
 
+  // マッチングデータの変更を検出し、コールバックを実行するエフェクト
+  useEffect(() => {
+    // マッチングが見つかり、かつマッチIDが変更された場合に処理
+    if (matchData && matchData.match_id &&
+        (!lastMatchIdRef.current || matchData.match_id !== lastMatchIdRef.current)) {
+      // マッチIDを更新
+      lastMatchIdRef.current = matchData.match_id;
+      // マッチフラグを設定
+      matchFoundRef.current = true;
+
+      console.log('[useMatchPolling] 新しいマッチング発見:', {
+        matchId: matchData.match_id
+      });
+
+      // マッチング発見時のコールバック実行
+      if (onMatchFoundRef.current) {
+        onMatchFoundRef.current(matchData);
+      }
+    }
+  }, [matchData]); // matchDataの変更を監視
+
+  // 停止条件関数
+  const stopConditionRef = useRef((matchData: MatchedUser | null) => {
+    if (!matchData) return false;
+
+    // マッチングが見つかっていて、stopOnMatchが有効なら停止
+    return matchFoundRef.current && stopOnMatchRef.current;
+  });
+
   // 安定したfetch関数
   const stableFetchFn = useCallback(() => fetchMatchDataRef.current(), []);
 
-  // ポーリングオプションをメモ化して安定性を確保し、依存配列を最小化
+  // ポーリングオプションをメモ化して安定性を確保
   const pollingOptions = useMemo(() => ({
     interval: intervalRef.current,
     immediate: immediateRef.current,
     detectVisibility: detectVisibilityRef.current,
     stopCondition: (data: MatchedUser | null) => stopConditionRef.current(data),
     onError: (error: Error) => {
-      console.error('[useMatchPolling] ポーリング中にエラー発生:', error);
+      console.error('[useMatchPolling] エラー発生:', error);
       if (onErrorRef.current) {
         onErrorRef.current(error);
       }
     },
-    // デフォルトでエラーを表示しない
     showError: showErrorRef.current
   }), []); // 依存配列を空にして再レンダリング時の再生成を防止
 
   // 共通ポーリングフックを使用
   const polling = usePolling<MatchedUser | null>(stableFetchFn, pollingOptions);
 
-  // マッチングデータの変更を検出し、コールバックを実行するエフェクト
-  useEffect(() => {
-    const matchData = currentMatchDataRef.current;
-
-    console.log('[useMatchPolling] マッチングデータ変更検出', {
-      hasMatchData: !!matchData,
-      matchId: matchData?.match_id,
-      lastMatchId: lastMatchIdRef.current,
-      matchFoundFlag: matchFoundRef.current
-    });
-
-    // マッチングが見つかり、前回と異なる場合のみ処理
-    if (matchData && matchData.match_id &&
-        (matchData.match_id !== lastMatchIdRef.current || !matchFoundRef.current)) {
-      // マッチIDを更新
-      lastMatchIdRef.current = matchData.match_id;
-      // マッチフラグを設定
-      matchFoundRef.current = true;
-
-      console.log('[useMatchPolling] 新しいマッチング発見!', {
-        matchId: matchData.match_id,
-        userId: matchData.user_id
-      });
-
-      // マッチング発見時のコールバック実行
-      if (onMatchFoundRef.current) {
-        console.log('[useMatchPolling] マッチング発見コールバック実行');
-        onMatchFoundRef.current(matchData);
-      }
-    } else if (matchData && matchData.match_id) {
-      console.log('[useMatchPolling] マッチングは見つかりましたが、既に検出済みです', {
-        matchId: matchData.match_id,
-        lastMatchId: lastMatchIdRef.current,
-        matchFoundFlag: matchFoundRef.current
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [polling?.data]); // polling?.dataを依存配列に追加し、オプショナルチェーンを使用
-
-  // 停止条件関数 - refで管理して依存配列の問題を回避
-  const stopConditionRef = useRef((matchData: MatchedUser | null) => {
-    if (!matchData) return false;
-
-    // マッチングが見つかっていて、stopOnMatchが有効なら停止
-    const shouldStop = matchFoundRef.current && stopOnMatchRef.current;
-    if (shouldStop) {
-      console.log('[useMatchPolling] 停止条件達成 - ポーリング停止');
-    }
-    return shouldStop;
-  });
-
-  // 開始時にマッチングフラグをリセットするカスタム開始関数
-  const startPolling = useCallback(() => {
-    // マッチングフラグをリセットして新しいマッチングを検出できるようにする
-    console.log('[useMatchPolling] マッチング検出フラグをリセット');
-    matchFoundRef.current = false;
-
-    // 元のポーリング開始
-    polling.startPolling();
-  }, [polling]);
-
   return {
     ...polling,
-    // カスタム開始関数でオーバーライド
-    startPolling,
     // lastMatchIdがあればマッチしていると判断する補助関数
     hasMatch: !!lastMatchIdRef.current
   };

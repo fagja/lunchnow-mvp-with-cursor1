@@ -64,6 +64,36 @@ export function useChatPolling(
   // 最後のメッセージ数を保持（パフォーマンス最適化）
   const lastMessageCountRef = useRef<number>(0);
 
+  // マッチングID比較ロジック
+  const isMatchIdChanged = useCallback((current: number | null, received: number | null, isFirstCheck: boolean) => {
+    // 初回チェックでは不一致を許容する
+    if (isFirstCheck) {
+      console.log('[useChatPolling] 初回チェックのため不一致を許容します');
+      return false;
+    }
+
+    // どちらかがnullの場合、特殊ケース処理
+    if (current === null || received === null) {
+      // currentがnullで新しい値が取得された場合（初期化後の初回）
+      if (current === null && received !== null) {
+        console.log('[useChatPolling] 初期値から有効な値への更新');
+        return false;
+      }
+
+      // 現在の値があるのに新しい値がnullの場合（キャンセルの可能性）
+      if (current !== null && received === null) {
+        console.log('[useChatPolling] マッチデータが取得できなくなりました');
+        return true;
+      }
+
+      // 両方nullなら変更なし
+      return false;
+    }
+
+    // 数値型に変換して比較
+    return Number(current) !== Number(received);
+  }, []);
+
   // 参照値を最新に保つ
   useEffect(() => {
     matchIdRef.current = matchId;
@@ -100,34 +130,80 @@ export function useChatPolling(
       // 現在のマッチ状態を取得して、キャンセルされていないか確認
       const matchResponse = await fetchCurrentMatch();
 
+      // マッチングデータとマッチIDのログ出力
+      console.log('[useChatPolling] マッチングデータ確認', {
+        matchId: matchIdRef.current,
+        currentMatchId: currentMatchIdRef.current,
+        responseMatchId: matchResponse.data?.match_id,
+        hasData: !!matchResponse.data,
+        error: matchResponse.error
+      });
+
       // マッチングがキャンセルされていた場合
-      if (!matchResponse.data || matchResponse.data.match_id !== currentMatchIdRef.current) {
+      if (!matchResponse.data) {
+        console.log('[useChatPolling] マッチングデータなし、キャンセル判定');
         if (onMatchCanceledRef.current) {
           onMatchCanceledRef.current();
         }
         return { messages: [], canceled: true };
       }
 
-      // マッチが有効な場合のみメッセージを取得
-      const messagesResponse = await fetchMessageHistory(matchIdRef.current!);
-      if (messagesResponse.data) {
-        const newMessages = messagesResponse.data;
+      // マッチングIDの比較
+      const isFirstCheck = !matchIdRef.current || matchIdRef.current === currentMatchIdRef.current;
+      if (isMatchIdChanged(currentMatchIdRef.current, matchResponse.data.match_id, isFirstCheck)) {
+        console.log('[useChatPolling] マッチングID不一致', {
+          current: currentMatchIdRef.current,
+          received: matchResponse.data.match_id
+        });
 
-        // 新しいメッセージがある場合のみ状態を更新（パフォーマンス最適化）
-        if (newMessages.length !== lastMessageCountRef.current) {
-          lastMessageCountRef.current = newMessages.length;
-          setMessages(newMessages);
-
-          // 新しいメッセージに関するコールバック
-          if (onNewMessagesRef.current) {
-            onNewMessagesRef.current(newMessages);
-          }
+        if (onMatchCanceledRef.current) {
+          onMatchCanceledRef.current();
         }
-
-        return { messages: newMessages, canceled: false };
+        return { messages: [], canceled: true };
       }
 
-      return { messages: [], canceled: false };
+      // 初回チェックだった場合、IDを更新
+      if (isFirstCheck) {
+        // 最新のマッチIDで更新
+        currentMatchIdRef.current = matchResponse.data.match_id;
+        matchIdRef.current = matchResponse.data.match_id;
+      }
+
+      // マッチIDをセット（状態保持のため）
+      currentMatchIdRef.current = matchResponse.data.match_id;
+
+      // マッチが有効な場合のみメッセージを取得
+      try {
+        const messagesResponse = await fetchMessageHistory(matchIdRef.current!);
+        if (messagesResponse.data) {
+          const newMessages = messagesResponse.data;
+
+          // メッセージ取得結果のログ
+          console.log('[useChatPolling] メッセージ取得結果', {
+            count: newMessages.length,
+            lastCount: lastMessageCountRef.current
+          });
+
+          // 新しいメッセージがある場合のみ状態を更新（パフォーマンス最適化）
+          if (newMessages.length !== lastMessageCountRef.current) {
+            lastMessageCountRef.current = newMessages.length;
+            setMessages(newMessages);
+
+            // 新しいメッセージに関するコールバック
+            if (onNewMessagesRef.current) {
+              onNewMessagesRef.current(newMessages);
+            }
+          }
+
+          return { messages: newMessages, canceled: false };
+        }
+
+        return { messages: [], canceled: false };
+      } catch (error) {
+        console.error('[useChatPolling] メッセージ取得エラー', error);
+        // エラーがあっても即座にキャンセル判定しない
+        return { messages: [], canceled: false };
+      }
     } catch (error) {
       throw error;
     }

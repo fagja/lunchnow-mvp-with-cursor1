@@ -142,10 +142,10 @@ export default function UsersPage() {
 
   // マッチング検出ポーリングの初期化
   const { startPolling: startMatchPolling, stopPolling: stopMatchPolling } = useMatchPolling({
-    interval: 10000, // 10秒ごとにポーリング（本番環境では適切な値に調整）
+    interval: 10000, // 10秒ごとにポーリング（適切なバランス）
     detectVisibility: true, // 画面が見えなくなったら自動停止
     immediate: true, // 即時実行
-    stopOnMatch: true, // マッチング検出時に自動停止
+    stopOnMatch: false, // マッチング検出後もポーリングを継続
     onMatchFound: handleMatchFound, // マッチング検出時のコールバック
     onError: (error) => {
       console.error('[UsersPage] マッチングポーリングエラー:', error);
@@ -205,39 +205,15 @@ export default function UsersPage() {
       const response = await createLike(userId);
 
       if (response.error) {
-        // エラーメッセージがオブジェクトの場合、message プロパティを使用
-        const errorMessage = typeof response.error === 'object' && response.error.message
-          ? response.error.message
-          : String(response.error);
-        safeSetState(setError, errorMessage);
+        handleLikeError(response.error);
         return;
       }
 
       // いいねが成功した場合、ユーザーデータを更新
-      const updatedUsers = users.map(user => {
-        if (user.id === userId) {
-          return { ...user, liked_by_me: true };
-        }
-        return user;
-      });
+      updateUserLikeStatus(userId);
 
-      safeSetState(setUsers, updatedUsers);
-
-      // マッチした場合、マッチモーダルを表示
-      if (response.data && 'match' in response.data && response.data.match) {
-        console.log('マッチング成立:', response.data.match.id);
-        const matchedUserData = users.find(user => user.id === userId) || null;
-        safeSetState(setMatchedUser, matchedUserData);
-        safeSetState(setShowMatchModal, true);
-
-        // 2秒後に自動的にチャット画面に遷移
-        setTimeout(() => {
-          handleMatchModalClose();
-        }, 2000);
-
-        // マッチング成立時にポーリングを停止（不要になるため）
-        stopMatchPolling();
-      }
+      // マッチング処理
+      handleMatchIfExists(response.data, userId);
     } catch (err) {
       console.error('いいね送信エラー:', err);
       safeSetState(setError, API_ERROR_MESSAGES.SEND_LIKE);
@@ -246,8 +222,44 @@ export default function UsersPage() {
     }
   };
 
+  // いいねエラー処理
+  const handleLikeError = (error: any) => {
+    // エラーメッセージがオブジェクトの場合、message プロパティを使用
+    const errorMessage = typeof error === 'object' && error.message
+      ? error.message
+      : String(error);
+    safeSetState(setError, errorMessage);
+  };
+
+  // ユーザーのいいね状態を更新
+  const updateUserLikeStatus = (userId: number) => {
+    const updatedUsers = users.map(user => {
+      if (user.id === userId) {
+        return { ...user, liked_by_me: true };
+      }
+      return user;
+    });
+
+    safeSetState(setUsers, updatedUsers);
+  };
+
+  // マッチング処理
+  const handleMatchIfExists = (data: any, userId: number) => {
+    if (data && 'match' in data && data.match) {
+      console.log('マッチング成立:', data.match.id);
+      const matchedUserData = users.find(user => user.id === userId) || null;
+      safeSetState(setMatchedUser, matchedUserData);
+      safeSetState(setShowMatchModal, true);
+
+      // 2秒後に自動的にチャット画面に遷移
+      setTimeout(handleMatchModalClose, 2000);
+    }
+  };
+
   // マッチモーダルを閉じてチャット画面に遷移
   const handleMatchModalClose = () => {
+    // マッチングが確定したのでポーリングを停止
+    stopMatchPolling();
     safeSetState(setShowMatchModal, false);
     navigateToChat(router);
   };

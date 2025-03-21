@@ -1,4 +1,5 @@
-import { MessageResponse, MessageListResponse, CreateMessageRequest } from '@/types/api.types';
+import { Message } from '@/types/database.types';
+import { MessagesResponse, MessageResponse, SendMessageRequest } from '@/types/api.types';
 import { fetchApi, postApi } from './api-client';
 import { getUserId, validateUserId } from '@/lib/storage-utils';
 
@@ -28,13 +29,12 @@ export async function sendMessage(matchId: number, content: string): Promise<Mes
     return createUserIdError();
   }
 
-  const messageData: CreateMessageRequest = {
-    matchId,
-    fromUserId,
+  const messageData: SendMessageRequest = {
+    from_user_id: Number(fromUserId),
     content
   };
 
-  return postApi<MessageResponse>(`${API_BASE_URL}`, messageData);
+  return postApi<Message>(`/api/matches/${matchId}/messages`, messageData);
 }
 
 /**
@@ -46,7 +46,7 @@ export async function sendMessage(matchId: number, content: string): Promise<Mes
 export async function fetchMessageHistory(
   matchId: number,
   limit: number = 50
-): Promise<MessageListResponse> {
+): Promise<MessagesResponse> {
   if (!matchId) {
     return {
       error: 'マッチIDが指定されていません',
@@ -54,7 +54,8 @@ export async function fetchMessageHistory(
     };
   }
 
-  return fetchApi<MessageListResponse>(`${API_BASE_URL}/${matchId}?limit=${limit}`);
+  // APIパスを修正 - 正しいエンドポイントを使用
+  return fetchApi<Message[]>(`/api/matches/${matchId}/messages?limit=${limit}`);
 }
 
 /**
@@ -66,17 +67,21 @@ export async function fetchMessageHistory(
 export async function fetchNewMessages(
   matchId: number,
   lastMessageId?: number
-): Promise<MessageListResponse> {
+): Promise<MessagesResponse> {
   const userId = getUserId();
 
   if (!userId) {
-    return createUserIdError();
+    return {
+      error: 'ユーザーIDが取得できません。再度ログインしてください。',
+      status: 401
+    };
   }
 
-  let url = `${API_BASE_URL}/${matchId}/new?userId=${userId}`;
+  // 新着メッセージAPIがないため、通常のメッセージ履歴APIを使用
+  let url = `/api/matches/${matchId}/messages?userId=${userId}`;
   if (lastMessageId) {
     url += `&lastMessageId=${lastMessageId}`;
   }
 
-  return fetchApi<MessageListResponse>(url);
+  return fetchApi<Message[]>(url);
 }

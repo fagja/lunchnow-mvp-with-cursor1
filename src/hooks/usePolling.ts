@@ -107,16 +107,14 @@ export function usePolling<T>(
 
   // ポーリング実行関数 - 循環参照を避けるためにuseCallbackの外に定義
   const executePollRef = useRef(async () => {
-      try {
-        // マウント状態でないならリターン
-        if (!isMountedRef.current) {
-          console.log('[usePolling] コンポーネントがアンマウント済みのため実行中止');
-          return;
-        }
+    try {
+      // マウント状態でないならリターン
+      if (!isMountedRef.current) {
+        return;
+      }
 
       // 試行回数を更新
       attemptsRef.current += 1;
-      console.log(`[usePolling] ポーリング実行 (試行回数: ${attemptsRef.current})`);
 
       setState((prev) => ({
         ...prev,
@@ -125,54 +123,48 @@ export function usePolling<T>(
       }));
 
       const result = await fetchFnRef.current();
-      console.log('[usePolling] データ取得成功', result);
 
-        // マウント状態でないならリターン
-        if (!isMountedRef.current) {
-          console.log('[usePolling] コンポーネントがアンマウント済みのため状態更新中止');
-          return;
-        }
+      // マウント状態でないならリターン
+      if (!isMountedRef.current) {
+        return;
+      }
 
-        setState((prev) => ({
-          ...prev,
-          data: result,
-          error: null,
-          isLoading: false,
-          lastUpdated: new Date(),
-        }));
+      setState((prev) => ({
+        ...prev,
+        data: result,
+        error: null,
+        isLoading: false,
+        lastUpdated: new Date(),
+      }));
 
-        hasErrorRef.current = false;
+      hasErrorRef.current = false;
 
-        // 停止条件が指定されていて条件が真の場合はポーリングを停止
+      // 停止条件が指定されていて条件が真の場合はポーリングを停止
       if (stopConditionRef.current && stopConditionRef.current(result)) {
-          console.log('[usePolling] 停止条件達成のためポーリング停止');
-          stopPolling();
-        }
-      } catch (error) {
-        // マウント状態でないならリターン
-        if (!isMountedRef.current) {
-          console.log('[usePolling] コンポーネントがアンマウント済みのためエラー処理中止');
-          return;
-        }
+        stopPolling();
+      }
+    } catch (error) {
+      // マウント状態でないならリターン
+      if (!isMountedRef.current) {
+        return;
+      }
 
-        console.error('[usePolling] ポーリング中にエラー発生:', error);
-        hasErrorRef.current = true;
+      console.error('[usePolling] エラー:', error);
+      hasErrorRef.current = true;
 
-        const normalizedError = errorHandler.handleError(error);
+      const normalizedError = errorHandler.handleError(error);
 
-        setState((prev) => ({
-          ...prev,
-          error: normalizedError,
-          isLoading: false,
-        }));
+      setState((prev) => ({
+        ...prev,
+        error: normalizedError,
+        isLoading: false,
+      }));
 
-        // エラー時にはポーリングを一時停止し、retryIntervalで再開
+      // エラー時にはポーリングを一時停止し、retryIntervalで再開
       if (intervalRef.current) {
-        console.log(`[usePolling] エラーのためポーリング一時停止、${retryIntervalRef.current}ms後に再試行`);
         clearInterval(intervalRef.current);
         intervalRef.current = setTimeout(() => {
           if (isMountedRef.current && isVisibleRef.current && enabledRef.current) {
-            console.log('[usePolling] リトライタイマー経過、ポーリング再開');
             intervalRef.current = setInterval(() => {
               executePollRef.current();
             }, intervalRef2.current);
@@ -186,39 +178,29 @@ export function usePolling<T>(
   const startPolling = useCallback(() => {
     // すでにポーリング中の場合は何もしない
     if (intervalRef.current) {
-      console.log('[usePolling] すでにポーリング中のため開始処理をスキップ');
       return;
     }
 
     // 最大試行回数に達した場合は何もしない
     if (maxAttemptsRef.current && attemptsRef.current >= maxAttemptsRef.current) {
-      console.log('[usePolling] 最大試行回数に達したためポーリング開始をスキップ');
       return;
     }
 
     // 非表示状態の場合は何もしない
     if (detectVisibilityRef.current && !isVisibleRef.current) {
-      console.log('[usePolling] ページが非表示状態のためポーリング開始をスキップ');
       return;
     }
 
     // enabledがfalseの場合は何もしない
     if (!enabledRef.current) {
-      console.log('[usePolling] 無効化されているためポーリング開始をスキップ');
       return;
     }
-
-    console.log('[usePolling] ポーリング開始', {
-      interval: intervalRef2.current,
-      immediate
-    });
 
     // ポーリング状態を更新
     setState((prev) => ({ ...prev, isPolling: true }));
 
     // 即時実行の場合はすぐに実行
     if (immediate) {
-      console.log('[usePolling] 即時実行オプションが有効、すぐにポーリング実行');
       executePollRef.current();
     }
 

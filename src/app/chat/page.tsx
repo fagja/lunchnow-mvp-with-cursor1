@@ -54,7 +54,12 @@ export default function ChatPage() {
         return;
       }
 
+      // マッチング情報をセット
+      console.log('マッチング情報取得成功:', matchResponse.data.match_id);
       setMatchInfo(matchResponse.data);
+
+      // セッションストレージにマッチングIDを保存（遷移間の整合性のため）
+      sessionStorage.setItem('current_match_id', String(matchResponse.data.match_id));
     } catch (err) {
       console.error('チャットデータ取得エラー:', err);
       setError(API_ERROR_MESSAGES.FETCH_MESSAGES);
@@ -65,6 +70,20 @@ export default function ChatPage() {
 
   // マッチングがキャンセルされた場合のコールバック
   const handleMatchCanceled = () => {
+    // 実際にキャンセルされたかどうかを再確認
+    const storedMatchId = sessionStorage.getItem('current_match_id');
+    console.log('キャンセル検出:', {
+      stored: storedMatchId,
+      current: matchInfo?.match_id
+    });
+
+    // マッチングが取得できている場合は誤検出の可能性があるので、再確認する
+    if (matchInfo && matchInfo.match_id && (!storedMatchId || Number(storedMatchId) === matchInfo.match_id)) {
+      console.log('キャンセル誤検出の可能性があるため、無視します');
+      return;
+    }
+
+    // 実際にキャンセルされた場合のみモーダル表示
     setShowCanceledModal(true);
   };
 
