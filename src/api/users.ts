@@ -8,8 +8,7 @@ import {
   fetchApi,
   postApi,
   patchApi,
-  createUserIdError,
-  checkAuthentication
+  createUserIdError
 } from './api-client';
 import { getUserId, saveUserId, validateUserId } from '@/lib/storage-utils';
 
@@ -40,10 +39,13 @@ export async function registerUser(userData: UpdateUserRequest): Promise<UserRes
  */
 export async function fetchUser(userId?: number): Promise<UserResponse> {
   if (!userId) {
-    const authCheck = checkAuthentication<UserResponse>();
-    if (authCheck) return authCheck;
+    const currentUserId = getUserId();
 
-    userId = getUserId()!; // ここで ! を使用できる（checkAuthenticationでnullチェック済み）
+    if (!currentUserId) {
+      return createUserIdError<UserResponse>();
+    }
+
+    userId = currentUserId;
   }
 
   return fetchApi<UserResponse>(`${API_BASE_URL}/${userId}`);
@@ -59,8 +61,11 @@ export async function fetchUsers(
   page: number = 1,
   limit: number = 10
 ): Promise<UsersResponse> {
-  const authCheck = checkAuthentication<UsersResponse>();
-  if (authCheck) return authCheck;
+  const userId = getUserId();
+
+  if (!userId) {
+    return createUserIdError<UsersResponse>();
+  }
 
   const queryParams = new URLSearchParams({
     page: page.toString(),
@@ -76,10 +81,12 @@ export async function fetchUsers(
  * @returns 更新結果
  */
 export async function updateUser(userData: UpdateUserRequest): Promise<UserResponse> {
-  const authCheck = checkAuthentication<UserResponse>();
-  if (authCheck) return authCheck;
+  const userId = getUserId();
 
-  const userId = getUserId()!;
+  if (!userId) {
+    return createUserIdError<UserResponse>();
+  }
+
   return patchApi<UserResponse>(`${API_BASE_URL}/${userId}`, userData);
 }
 
@@ -88,10 +95,15 @@ export async function updateUser(userData: UpdateUserRequest): Promise<UserRespo
  * ローカルストレージのIDを使用して自動的にユーザー情報を取得
  */
 export async function fetchCurrentUser(): Promise<UserResponse> {
-  const authCheck = checkAuthentication<UserResponse>();
-  if (authCheck) return authCheck;
+  const userId = getUserId();
 
-  const userId = getUserId()!;
+  if (!userId) {
+    return {
+      error: 'エラーが発生しました',
+      status: 404
+    };
+  }
+
   return fetchUser(userId);
 }
 

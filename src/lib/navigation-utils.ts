@@ -1,86 +1,104 @@
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 /**
- * ナビゲーション機能のオプション
- * @property {boolean} isEdit - 編集モードでの遷移かどうか
- * @property {string} fallbackUrl - エラー時のフォールバックURL
- * @property {Function} beforeNavigate - 遷移前に実行するコールバック関数
- * @property {boolean} forceFullReload - フルリロードで遷移するかどうか
- * @property {string[]} storageFlags - 遷移時に設定するストレージフラグの配列
- * @property {Record<string, string>} queryParams - 追加のクエリパラメータ
+ * ナビゲーションオプションインターフェース
  */
-export type NavigationOptions = {
+export interface NavigationOptions {
+  /**
+   * 編集モードかどうか
+   */
   isEdit?: boolean;
+  /**
+   * 遷移前に実行する関数
+   */
+  beforeNavigate?: () => void;
+  /**
+   * フォールバックURL
+   */
   fallbackUrl?: string;
-  beforeNavigate?: () => void | Promise<void>;
-  forceFullReload?: boolean; // フルリロードを強制するフラグ
-  storageFlags?: string[]; // 遷移時に設定するストレージフラグ
-  queryParams?: Record<string, string>; // 追加のクエリパラメータ
-};
+  /**
+   * 完全なページリロードを強制するかどうか
+   */
+  forceFullReload?: boolean;
+  /**
+   * セッションストレージに設定するフラグのリスト
+   */
+  storageFlags?: string[];
+  /**
+   * URLクエリパラメータ
+   */
+  queryParams?: Record<string, string | number | boolean>;
+}
 
 /**
- * アプリ内で統一された画面遷移を提供する関数
+ * アプリ内統一ナビゲーション関数
  * @param router Next.jsのrouterオブジェクト
- * @param path 遷移先のパス
- * @param options 遷移オプション
+ * @param url 遷移先URL
+ * @param options ナビゲーションオプション
  * @returns Promise<void>
  */
-export async function navigateTo(
+export function navigateTo(
   router: AppRouterInstance,
-  path: string,
+  url: string,
   options: NavigationOptions = {}
 ): Promise<void> {
-  try {
-    // 遷移前の処理があれば実行
-    if (options.beforeNavigate) {
-      await Promise.resolve(options.beforeNavigate());
-    }
+  console.log(`navigateTo: ${url}`, options);
 
-    // ストレージフラグの設定
-    if (options.storageFlags && options.storageFlags.length > 0) {
-      options.storageFlags.forEach(flag => {
-        window.sessionStorage.setItem(flag, 'true');
-        window.localStorage.setItem(flag, 'true');
-      });
-    }
-
-    // クエリパラメータの構築
-    let url = path;
-    const queryParamsObj: Record<string, string> = {};
-
-    // 編集モードフラグを追加
-    if (options.isEdit) {
-      queryParamsObj.edit = 'true';
-    }
-
-    // 追加のクエリパラメータを統合
-    if (options.queryParams) {
-      Object.assign(queryParamsObj, options.queryParams);
-    }
-
-    // クエリパラメータ文字列の構築
-    const queryParams = Object.entries(queryParamsObj)
-      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+  // クエリパラメータの処理
+  if (options.queryParams) {
+    const queryString = Object.entries(options.queryParams)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
       .join('&');
+    url = `${url}${url.includes('?') ? '&' : '?'}${queryString}`;
+    console.log(`クエリパラメータ追加後のURL: ${url}`);
+  }
 
-    if (queryParams) {
-      url = `${path}?${queryParams}`;
+  // isEditが指定されている場合
+  if (options.isEdit) {
+    url = `${url}${url.includes('?') ? '&' : '?'}edit=true`;
+    console.log(`編集モード追加後のURL: ${url}`);
+  }
+
+  // ストレージフラグの設定
+  if (options.storageFlags && options.storageFlags.length > 0) {
+    options.storageFlags.forEach(flag => {
+      console.log(`ストレージフラグを設定: ${flag}`);
+      sessionStorage.setItem(flag, 'true');
+    });
+  }
+
+  // 遷移前の処理
+  if (options.beforeNavigate) {
+    try {
+      console.log('beforeNavigate関数を実行');
+      options.beforeNavigate();
+    } catch (error) {
+      console.error('遷移前処理でエラーが発生:', error);
     }
+  }
 
-    // フルリロードが必要な場合
-    if (options.forceFullReload) {
-      window.location.href = url;
-      return;
-    }
+  // 完全リロードが必要な場合
+  if (options.forceFullReload) {
+    console.log('完全なページリロードを実行');
+    window.location.href = url;
+    return Promise.resolve();
+  }
 
-    // 通常のNext.jsルーティング
+  // 通常のNext.js遷移
+  try {
+    console.log('Next.jsルーターで遷移実行');
     router.push(url);
-  } catch (err) {
-    console.error('Navigation error:', err);
-    // フォールバック処理
+    return Promise.resolve();
+  } catch (error) {
+    console.error('ナビゲーションエラー:', error);
+
+    // フォールバックURLが指定されている場合
     if (options.fallbackUrl) {
-      window.location.href = options.fallbackUrl;
+      console.log(`フォールバックURLに遷移: ${options.fallbackUrl}`);
+      router.push(options.fallbackUrl);
     }
+
+    return Promise.resolve();
   }
 }
 
@@ -119,10 +137,11 @@ export function navigateToUsers(
 export function navigateFromSetupToUsers(
   router: AppRouterInstance
 ): Promise<void> {
+  console.log('セットアップからユーザー一覧への特殊遷移を実行します');
   return navigateTo(router, '/users', {
-    forceFullReload: true,
-    storageFlags: ['lunchnow_needs_refresh'],
-    fallbackUrl: '/users?from=setup'
+    forceFullReload: true, // window.location.hrefを使用した完全なページリロード
+    storageFlags: ['lunchnow_needs_refresh'], // 遷移先でのリフレッシュフラグ
+    fallbackUrl: '/users?from=setup' // エラー時のフォールバックURL
   });
 }
 

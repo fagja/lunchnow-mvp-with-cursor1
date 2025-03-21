@@ -25,6 +25,29 @@ export default function UsersPage() {
   const [matchedUser, setMatchedUser] = useState<RecruitingUser | null>(null);
   const isMountedRef = useRef(true);
 
+  // マウント状態を確認して状態を安全に更新する関数
+  const safeSetState = (setter: any, value: any) => {
+    if (isMountedRef.current) {
+      setter(value);
+    }
+  };
+
+  // セッションとローカルストレージのリフレッシュフラグをチェックして削除する関数
+  const checkAndClearRefreshFlags = () => {
+    console.log('リフレッシュフラグをチェック');
+    const sessionNeedsRefresh = window.sessionStorage.getItem('lunchnow_needs_refresh');
+    const localNeedsRefresh = window.localStorage.getItem('lunchnow_needs_refresh');
+
+    // リフレッシュフラグが存在する場合は削除
+    if (sessionNeedsRefresh || localNeedsRefresh) {
+      console.log('リフレッシュフラグを検出、クリアします');
+      window.sessionStorage.removeItem('lunchnow_needs_refresh');
+      window.localStorage.removeItem('lunchnow_needs_refresh');
+      return true;
+    }
+    return false;
+  };
+
   // ユーザーデータを取得する関数
   const loadUsers = async () => {
     if (!isMountedRef.current) return;
@@ -36,26 +59,52 @@ export default function UsersPage() {
       if (!isMountedRef.current) return;
 
       if (response.error) {
+        console.error('ユーザーデータ取得エラー:', response.error);
+
         // HTTP 404エラーの特別処理
         if (response.status === 404) {
-          setError('データの取得に失敗しました。しばらく待ってから再試行してください。');
-          setUsers([]); // 空の配列を設定して表示を更新
+          safeSetState(setError, 'データの取得に失敗しました。しばらく待ってから再試行してください。');
+          safeSetState(setUsers, []); // 空の配列を設定して表示を更新
         } else {
-          // ApiErrorオブジェクトまたは文字列を適切に処理
+          // APIエラーオブジェクトまたは文字列を適切に処理
           const errorMessage = typeof response.error === 'object' && response.error.message
             ? response.error.message
             : String(response.error);
-          setError(errorMessage);
+          safeSetState(setError, errorMessage);
         }
       } else {
-        setUsers(response.data || []);
-        setLastUpdated(new Date().toLocaleTimeString());
+        console.log('ユーザーデータ取得成功:', response.data?.length || 0, '件');
+        safeSetState(setUsers, response.data || []);
+        safeSetState(setLastUpdated, new Date().toLocaleTimeString());
       }
     } catch (err) {
-      if (isMountedRef.current) {
-        console.error('ユーザー一覧取得エラー:', err);
-        setError(API_ERROR_MESSAGES.FETCH_USERS);
+      console.error('ユーザー一覧取得エラー:', err);
+      safeSetState(setError, API_ERROR_MESSAGES.FETCH_USERS);
+    }
+  };
+
+  // マッチング状態をチェックする関数
+  const checkMatchStatus = async () => {
+    if (!isMountedRef.current) return false;
+
+    try {
+      console.log('マッチング状態を確認');
+      const matchResponse = await fetchCurrentMatch();
+
+      if (!isMountedRef.current) return false;
+
+      // マッチングがあれば、チャット画面に遷移
+      if (matchResponse.data && matchResponse.data.match_id) {
+        console.log('マッチングが見つかりました:', matchResponse.data.match_id);
+        router.push('/chat');
+        return true;
       }
+
+      console.log('アクティブなマッチングはありません');
+      return false;
+    } catch (err) {
+      console.error('マッチング確認エラー:', err);
+      return false; // エラーが発生しても処理を続行
     }
   };
 
@@ -63,6 +112,8 @@ export default function UsersPage() {
   const handleMatchFound = (matchData: MatchedUser) => {
     // マッチングが存在し、相手ユーザーが含まれている場合
     if (matchData && matchData.user) {
+      console.log('マッチング成立:', matchData.match_id);
+
       // マッチしたユーザーの情報をモーダル表示用に設定
       const partnerUser = {
         id: matchData.user.id,
@@ -79,8 +130,8 @@ export default function UsersPage() {
       } as RecruitingUser;
 
       // マッチングモーダルを表示
-      setMatchedUser(partnerUser);
-      setShowMatchModal(true);
+      safeSetState(setMatchedUser, partnerUser);
+      safeSetState(setShowMatchModal, true);
 
       // 2秒後に自動的にチャット画面に遷移
       setTimeout(() => {
@@ -89,34 +140,29 @@ export default function UsersPage() {
     }
   };
 
-  // マッチング検出用ポーリングを設定
-  const { startPolling, stopPolling } = useMatchPolling({
-    interval: 15000, // 15秒間隔でポーリング (7秒から延長)
-    onMatchFound: handleMatchFound,
-    onError: (err) => {
-      console.error('マッチングポーリングエラー:', err);
-      // UI上にはエラーを表示しない（ユーザーエクスペリエンスを損なわないため）
+  // マッチング検出ポーリングの初期化
+  const { startPolling: startMatchPolling, stopPolling: stopMatchPolling } = useMatchPolling({
+    interval: 10000, // 10秒ごとにポーリング（本番環境では適切な値に調整）
+    detectVisibility: true, // 画面が見えなくなったら自動停止
+    immediate: true, // 即時実行
+    stopOnMatch: true, // マッチング検出時に自動停止
+    onMatchFound: handleMatchFound, // マッチング検出時のコールバック
+    onError: (error) => {
+      console.error('[UsersPage] マッチングポーリングエラー:', error);
+      // エラー発生時は静かに処理（ユーザーに通知せずに再試行）
     },
-    detectVisibility: true, // バックグラウンド時に自動停止
-    stopOnMatch: true, // マッチング成立時に自動停止
+    showError: false, // エラーをUIに表示しない
   });
 
   // 初回レンダリング時にマッチングを確認し、なければユーザーデータを取得
   useEffect(() => {
-    // コンポーネントマウント時に一度だけ実行される関数
+    // コンポーネントマウント時に一度だけ実行される初期化関数
     const initializeData = async () => {
       try {
-        setLoading(true);
+        safeSetState(setLoading, true);
 
-        // セッションストレージとローカルストレージをチェック
-        const sessionNeedsRefresh = window.sessionStorage.getItem('lunchnow_needs_refresh');
-        const localNeedsRefresh = window.localStorage.getItem('lunchnow_needs_refresh');
-
-        // リフレッシュフラグが存在する場合は削除
-        if (sessionNeedsRefresh || localNeedsRefresh) {
-          window.sessionStorage.removeItem('lunchnow_needs_refresh');
-          window.localStorage.removeItem('lunchnow_needs_refresh');
-        }
+        // セッションストレージとローカルストレージのフラグをチェック
+        checkAndClearRefreshFlags();
 
         // マッチング状態の確認
         const hasMatch = await checkMatchStatus();
@@ -126,41 +172,17 @@ export default function UsersPage() {
           await loadUsers();
 
           // マッチングポーリングを開始
-          startPolling();
+          startMatchPolling();
         }
       } catch (error) {
-        if (isMountedRef.current) {
-          setError(API_ERROR_MESSAGES.NETWORK_ERROR);
-        }
+        console.error('初期化エラー:', error);
+        safeSetState(setError, API_ERROR_MESSAGES.NETWORK_ERROR);
       } finally {
-        if (isMountedRef.current) {
-          setLoading(false);
-        }
+        safeSetState(setLoading, false);
       }
     };
 
-    // マッチング状態をチェックする関数
-    const checkMatchStatus = async () => {
-      if (!isMountedRef.current) return false;
-
-      try {
-        const matchResponse = await fetchCurrentMatch();
-
-        if (!isMountedRef.current) return false;
-
-        // マッチングがあれば、チャット画面に遷移
-        if (matchResponse.data && matchResponse.data.match_id) {
-          router.push('/chat');
-          return true;
-        }
-
-        return false;
-      } catch (err) {
-        console.error('マッチング確認エラー:', err);
-        return false; // エラーが発生しても処理を続行
-      }
-    };
-
+    // コンポーネントのマウント状態を設定
     isMountedRef.current = true;
 
     // 初期化を実行
@@ -168,15 +190,18 @@ export default function UsersPage() {
 
     // クリーンアップ関数
     return () => {
+      console.log('UsersPageコンポーネントのクリーンアップ');
       isMountedRef.current = false;
-      stopPolling();
+      stopMatchPolling();
     };
   }, []);
 
   // 「とりまランチ？」ボタンをクリックした時の処理
   const handleLike = async (userId: number) => {
     try {
-      setLoading(true);
+      safeSetState(setLoading, true);
+      console.log(`ユーザーID: ${userId} に「とりまランチ？」を送信`);
+
       const response = await createLike(userId);
 
       if (response.error) {
@@ -184,7 +209,7 @@ export default function UsersPage() {
         const errorMessage = typeof response.error === 'object' && response.error.message
           ? response.error.message
           : String(response.error);
-        setError(errorMessage);
+        safeSetState(setError, errorMessage);
         return;
       }
 
@@ -196,13 +221,14 @@ export default function UsersPage() {
         return user;
       });
 
-      setUsers(updatedUsers);
+      safeSetState(setUsers, updatedUsers);
 
       // マッチした場合、マッチモーダルを表示
       if (response.data && 'id' in response.data) {
+        console.log('マッチング成立:', response.data.id);
         const matchedUserData = users.find(user => user.id === userId) || null;
-        setMatchedUser(matchedUserData);
-        setShowMatchModal(true);
+        safeSetState(setMatchedUser, matchedUserData);
+        safeSetState(setShowMatchModal, true);
 
         // 2秒後に自動的にチャット画面に遷移
         setTimeout(() => {
@@ -210,19 +236,19 @@ export default function UsersPage() {
         }, 2000);
 
         // マッチング成立時にポーリングを停止（不要になるため）
-        stopPolling();
+        stopMatchPolling();
       }
     } catch (err) {
       console.error('いいね送信エラー:', err);
-      setError(API_ERROR_MESSAGES.SEND_LIKE);
+      safeSetState(setError, API_ERROR_MESSAGES.SEND_LIKE);
     } finally {
-      setLoading(false);
+      safeSetState(setLoading, false);
     }
   };
 
   // マッチモーダルを閉じてチャット画面に遷移
   const handleMatchModalClose = () => {
-    setShowMatchModal(false);
+    safeSetState(setShowMatchModal, false);
     navigateToChat(router);
   };
 
@@ -233,7 +259,7 @@ export default function UsersPage() {
     // ナビゲーションユーティリティを使用して遷移
     navigateToSetup(router, {
       isEdit: true,
-      beforeNavigate: stopPolling,
+      beforeNavigate: stopMatchPolling,
       fallbackUrl: '/setup?edit=true'
     });
   };

@@ -34,6 +34,8 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     showError = false
   } = options;
 
+  console.log('[useMatchPolling] 初期化', { interval, detectVisibility, stopOnMatch, immediate });
+
   // ref経由でオプションとコールバック関数を安定的に管理
   const onMatchFoundRef = useRef(onMatchFound);
   const onErrorRef = useRef(onError);
@@ -63,23 +65,35 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
 
   // マッチングデータを取得する関数 - refで管理して依存配列の問題を回避
   const fetchMatchDataRef = useRef(async () => {
+    console.log('[useMatchPolling] マッチングデータ取得開始');
     try {
       const response = await fetchCurrentMatch();
 
       if (response.error) {
-        throw new Error(
-          typeof response.error === 'string'
-            ? response.error
-            : response.error.message || '不明なエラーが発生しました'
-        );
+        const errorMessage = typeof response.error === 'string'
+          ? response.error
+          : response.error.message || '不明なエラーが発生しました';
+        console.error('[useMatchPolling] エラー発生:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       // 取得したマッチングデータを保存
       const matchData = response.data || null;
       currentMatchDataRef.current = matchData;
 
+      if (matchData) {
+        console.log('[useMatchPolling] マッチングデータ取得成功:', {
+          matchId: matchData.match_id,
+          userId: matchData.user_id,
+          status: matchData.status
+        });
+      } else {
+        console.log('[useMatchPolling] マッチングデータなし');
+      }
+
       return matchData;
     } catch (error) {
+      console.error('[useMatchPolling] 例外発生:', error);
       throw error;
     }
   });
@@ -95,8 +109,14 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
       // マッチフラグを設定
       matchFoundRef.current = true;
 
+      console.log('[useMatchPolling] 新しいマッチング発見!', {
+        matchId: matchData.match_id,
+        userId: matchData.user_id
+      });
+
       // マッチング発見時のコールバック実行
       if (onMatchFoundRef.current) {
+        console.log('[useMatchPolling] マッチング発見コールバック実行');
         onMatchFoundRef.current(matchData);
       }
     }
@@ -108,7 +128,11 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     if (!matchData) return false;
 
     // マッチングが見つかっていて、stopOnMatchが有効なら停止
-    return matchFoundRef.current && stopOnMatchRef.current;
+    const shouldStop = matchFoundRef.current && stopOnMatchRef.current;
+    if (shouldStop) {
+      console.log('[useMatchPolling] 停止条件達成 - ポーリング停止');
+    }
+    return shouldStop;
   });
 
   // 安定したfetch関数
@@ -121,6 +145,7 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
     detectVisibility: detectVisibilityRef.current,
     stopCondition: (data: MatchedUser | null) => stopConditionRef.current(data),
     onError: (error: Error) => {
+      console.error('[useMatchPolling] ポーリング中にエラー発生:', error);
       if (onErrorRef.current) {
         onErrorRef.current(error);
       }

@@ -13,9 +13,6 @@ import { useUserData } from '@/hooks/useUserData';
 import { getInitialFormData } from '@/lib/form-utils';
 import { navigateFromSetupToUsers } from '@/lib/navigation-utils';
 
-// テストモードフラグ - テスト時にはtrueに設定
-const TEST_NAVIGATION_UTILS = true;
-
 export default function SetupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,16 +28,19 @@ export default function SetupPage() {
     try {
       setLoading(true);
       const userId = getUserId();
+      console.log('フォーム送信処理開始', { userId, isEditMode });
 
       let response;
 
       if (userId) {
         // 既存ユーザーの更新
+        console.log('既存ユーザーの更新:', userId);
         response = await updateUser({
           ...data
         });
       } else {
         // 新規ユーザーの登録
+        console.log('新規ユーザーの登録');
         response = await registerUser({
           ...data
         });
@@ -51,17 +51,12 @@ export default function SetupPage() {
         const errorMessage = typeof response.error === 'string'
           ? response.error
           : response.error.message || 'エラーが発生しました';
+        console.error('ユーザー情報保存エラー:', errorMessage);
         setError(errorMessage);
       } else {
-        if (TEST_NAVIGATION_UTILS) {
-          // navigateFromSetupToUsers関数を使用
-          navigateFromSetupToUsers(router);
-        } else {
-          // window.location.hrefを使用した確実な遷移
-          window.sessionStorage.setItem('lunchnow_needs_refresh', 'true');
-          window.localStorage.setItem('lunchnow_needs_refresh', 'true');
-          window.location.href = '/users?from=setup';
-        }
+        console.log('ユーザー情報保存成功:', response.data?.id);
+        // navigateFromSetupToUsers関数を使用して遷移
+        navigateFromSetupToUsers(router);
       }
     } catch (err) {
       console.error('ユーザー情報保存エラー:', err);
