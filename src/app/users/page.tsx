@@ -26,38 +26,32 @@ export default function UsersPage() {
 
   // ユーザーデータを取得する関数
   const loadUsers = async () => {
-    setLoading(true);
-    setError(null);
-
-    console.log('【デバッグ】ユーザーデータ取得開始');
+    if (!isMountedRef.current) return;
 
     try {
+      console.log('ユーザーデータ取得開始');
       const response = await fetchRecruitingUsers();
-      console.log('【デバッグ】fetchRecruitingUsers応答:', response);
+
+      if (!isMountedRef.current) return;
 
       if (response.error) {
-        console.error('【デバッグ】API呼び出しエラー:', response.error, 'ステータス:', response.status);
-
         // HTTP 404エラーの特別処理
         if (response.status === 404) {
-          console.error('【デバッグ】リソースが見つかりません（404エラー）');
           setError('データの取得に失敗しました。しばらく待ってから再試行してください。');
           setUsers([]); // 空の配列を設定して表示を更新
         } else {
           setError(response.error);
         }
       } else {
-        console.log('【デバッグ】取得ユーザー数:', response.data?.length || 0);
         setUsers(response.data || []);
         setLastUpdated(new Date().toLocaleTimeString());
       }
     } catch (err) {
-      console.error('【デバッグ】ユーザー一覧取得例外:', err);
-      setError(API_ERROR_MESSAGES.FETCH_USERS);
+      if (isMountedRef.current) {
+        console.error('ユーザー一覧取得エラー:', err);
+        setError(API_ERROR_MESSAGES.FETCH_USERS);
+      }
     }
-
-    console.log('【デバッグ】ユーザーデータ取得完了');
-    setLoading(false);
   };
 
   // マッチング成立時のコールバック関数
@@ -104,154 +98,76 @@ export default function UsersPage() {
 
   // 初回レンダリング時にマッチングを確認し、なければユーザーデータを取得
   useEffect(() => {
-    // グローバルにデバッグ情報を公開
-    if (typeof window !== 'undefined') {
-      // @ts-ignore
-      window.__lunchnow_debug = {
-        checkRefreshFlag: () => {
-          const sessionFlag = window.sessionStorage.getItem('lunchnow_needs_refresh');
-          const localFlag = window.localStorage.getItem('lunchnow_needs_refresh');
-          const timestamp = window.sessionStorage.getItem('lunchnow_refresh_timestamp') ||
-                          window.localStorage.getItem('lunchnow_refresh_timestamp');
-          console.log('【デバッグツール】リフレッシュフラグ (session):', sessionFlag);
-          console.log('【デバッグツール】リフレッシュフラグ (local):', localFlag);
-          console.log('【デバッグツール】リフレッシュタイムスタンプ:', timestamp);
-          return { sessionFlag, localFlag, timestamp };
-        },
-        clearFlags: () => {
-          window.sessionStorage.removeItem('lunchnow_needs_refresh');
-          window.localStorage.removeItem('lunchnow_needs_refresh');
-          window.sessionStorage.removeItem('lunchnow_refresh_timestamp');
-          window.localStorage.removeItem('lunchnow_refresh_timestamp');
-          console.log('【デバッグツール】リフレッシュフラグをクリアしました');
-        },
-        forceLoadUsers: () => {
-          console.log('【デバッグツール】ユーザーデータの強制ロードを開始します');
-          loadUsers();
-        }
-      };
-    }
-
-    const checkMatchAndLoadUsers = async () => {
-      console.log('【デバッグ】checkMatchAndLoadUsers関数が呼び出されました');
-
-      if (!isMountedRef.current) return;
-
+    // コンポーネントマウント時に一度だけ実行される関数
+    const initializeData = async () => {
       try {
         setLoading(true);
 
-        // すでにマッチがあるか確認
-        try {
-          console.log('【デバッグ】マッチング確認開始');
-          const matchResponse = await fetchCurrentMatch();
-          console.log('【デバッグ】マッチ情報:', matchResponse);
-
-          if (matchResponse.data && matchResponse.data.match_id) {
-            console.log('【デバッグ】既存のマッチが見つかりました。チャット画面へ遷移します。');
-            // マッチが見つかった場合、チャット画面へ遷移
-            router.push('/chat');
-            return;
-          }
-        } catch (error) {
-          console.error('【デバッグ】マッチ確認中にエラーが発生しました:', error);
-        }
-
-        // リフレッシュフラグをチェック（セッションストレージとローカルストレージの両方）
+        // セッションストレージとローカルストレージをチェック
         const sessionNeedsRefresh = window.sessionStorage.getItem('lunchnow_needs_refresh');
         const localNeedsRefresh = window.localStorage.getItem('lunchnow_needs_refresh');
-        const needsRefresh = sessionNeedsRefresh === 'true' || localNeedsRefresh === 'true';
-        console.log('【デバッグ】リフレッシュフラグ状態:',
-          { sessionNeedsRefresh, localNeedsRefresh, needsRefresh });
 
-        // URLからタイムスタンプを取得
-        const url = new URL(window.location.href);
-        const urlTimestamp = url.searchParams.get('t');
-        console.log('【デバッグ】URLタイムスタンプ:', urlTimestamp);
-        // fromパラメータの確認
-        const fromSetup = url.searchParams.get('from') === 'setup';
-        console.log('【デバッグ】setup画面からの遷移:', fromSetup);
-
-        // ナビゲーションタイプを取得（Chromeでは、window.performance.navigation.typeが使用可能）
-        let navigationType = -1;
-        try {
-          // @ts-ignore - 型エラーを無視（一部のブラウザではサポートされていないため）
-          if (window.performance && window.performance.navigation) {
-            // @ts-ignore
-            navigationType = window.performance.navigation.type;
-            console.log('【デバッグ】ナビゲーションタイプ:', navigationType);
-            // 0: 通常ナビゲーション, 1: リロード, 2: 戻る/進む, 255: その他
-          }
-        } catch (e) {
-          console.error('【デバッグ】ナビゲーションタイプの取得に失敗:', e);
-        }
-
-        // 遷移タイプの総合判定
-        const isRedirectFromSetup = fromSetup || urlTimestamp;
-        const isReload = navigationType === 1;
-        const isBackForward = navigationType === 2;
-
-        console.log('【デバッグ】遷移タイプ分析:',
-          { isRedirectFromSetup, isReload, isBackForward });
-
-        console.log('【デバッグ】ユーザー一覧データ取得開始（loadUsers関数呼び出し）');
-        // ユーザー一覧データを取得（リフレッシュフラグの有無にかかわらず一度だけ実行）
-        try {
-          await loadUsers();
-          console.log('【デバッグ】ユーザー一覧データ取得完了');
-        } catch (error) {
-          console.error('【デバッグ】ユーザー一覧データ取得中にエラーが発生しました:', error);
-          setError('データの取得に失敗しました。更新ボタンを押して再試行してください。');
-        }
-
-        // マッチングポーリングを開始
-        if (isMountedRef.current) {
-          console.log('【デバッグ】マッチングポーリング開始');
-          startPolling();
-        }
-
-        // フラグが存在した場合は削除（セッションストレージとローカルストレージの両方）
-        if (needsRefresh || isRedirectFromSetup) {
-          console.log('【デバッグ】リフレッシュフラグまたはURLパラメータが検出されました。フラグを削除します。');
+        // リフレッシュフラグが存在する場合は削除
+        if (sessionNeedsRefresh || localNeedsRefresh) {
           window.sessionStorage.removeItem('lunchnow_needs_refresh');
           window.localStorage.removeItem('lunchnow_needs_refresh');
         }
 
-        setLoading(false);
-      } catch (err) {
-        console.error('【デバッグ】checkMatchAndLoadUsers関数内でエラー発生:', err);
+        // マッチング状態の確認
+        const hasMatch = await checkMatchStatus();
+
+        // マッチングがない場合のみユーザーデータを取得
+        if (!hasMatch && isMountedRef.current) {
+          await loadUsers();
+
+          // マッチングポーリングを開始
+          startPolling();
+        }
+      } catch (error) {
         if (isMountedRef.current) {
-          setError('予期せぬエラーが発生しました。更新ボタンを押して再試行してください。');
+          console.error('初期化エラー:', error);
+          setError(API_ERROR_MESSAGES.NETWORK_ERROR);
+        }
+      } finally {
+        if (isMountedRef.current) {
           setLoading(false);
         }
       }
     };
 
-    // 初期ロード時と再ロード時にチェックを実行
-    checkMatchAndLoadUsers();
+    // マッチング状態をチェックする関数
+    const checkMatchStatus = async () => {
+      if (!isMountedRef.current) return false;
 
-    // window.loadイベントのリスナーを追加
-    window.addEventListener('load', () => {
-      console.log('【デバッグ】window.loadイベントが発火しました');
-      // リロード時に必要ならリフレッシュを実行
-      setTimeout(() => checkMatchAndLoadUsers(), 100);
-    });
+      try {
+        const matchResponse = await fetchCurrentMatch();
 
-    // popstateイベントのリスナーを追加
-    window.addEventListener('popstate', () => {
-      console.log('【デバッグ】popstateイベントが発火しました');
-      // 戻る/進むボタンが使用された場合にも更新を行う
-      setTimeout(() => checkMatchAndLoadUsers(), 100);
-    });
+        if (!isMountedRef.current) return false;
 
-    // コンポーネントのアンマウント時にポーリングを停止
+        // マッチングがあれば、チャット画面に遷移
+        if (matchResponse.data && matchResponse.data.match_id) {
+          router.push('/chat');
+          return true;
+        }
+
+        return false;
+      } catch (err) {
+        console.error('マッチング確認エラー:', err);
+        return false; // エラーが発生しても処理を続行
+      }
+    };
+
+    isMountedRef.current = true;
+
+    // 初期化を実行
+    initializeData();
+
+    // クリーンアップ関数
     return () => {
-      console.log('【デバッグ】コンポーネントアンマウント: クリーンアップ処理実行');
       isMountedRef.current = false;
       stopPolling();
-      window.removeEventListener('load', () => checkMatchAndLoadUsers());
-      window.removeEventListener('popstate', () => checkMatchAndLoadUsers());
     };
-  }, []); // routerを依存配列から削除
+  }, []);
 
   // 「とりまランチ？」ボタンをクリックした時の処理
   const handleLike = async (userId: number) => {

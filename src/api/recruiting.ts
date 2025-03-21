@@ -28,10 +28,6 @@ async function fetchRecruitingUsersBase(
   // URLが指定されている場合はそのまま使用、ない場合は生成
   const apiUrl = url || `${API_BASE_URL}?currentUserId=${currentUserId}`;
 
-  // デバッグ用にURLをログ出力
-  console.log('【デバッグ】API呼び出しURL:', apiUrl);
-  console.log('【デバッグ】currentUserId:', currentUserId);
-
   // キャッシュを無効化するフェッチオプションを作成
   const fetchOptions: RequestInit = {
     ...options,
@@ -45,10 +41,9 @@ async function fetchRecruitingUsersBase(
 
   try {
     const response = await fetchApi<RecruitingUsersResponse['data']>(apiUrl, fetchOptions);
-    console.log('【デバッグ】API応答:', response);
     return response;
   } catch (error) {
-    console.error('【デバッグ】募集中ユーザー取得エラー:', error);
+    console.error('募集中ユーザー取得エラー:', error);
     return {
       error: 'エラーが発生しました',
       status: 500

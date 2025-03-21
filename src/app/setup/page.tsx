@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, startTransition } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { ProfileForm } from '@/components/forms/profile-form';
@@ -49,62 +49,36 @@ export default function SetupPage() {
     try {
       setLoading(true);
       const userId = getUserId();
-      console.log('【デバッグ】setup画面: フォーム送信処理開始', { userId });
 
       let response;
 
       if (userId) {
         // 既存ユーザーの更新
-        console.log('【デバッグ】setup画面: 既存ユーザーの更新処理');
         response = await updateUser({
           ...data as UpdateUserRequest
         });
       } else {
         // 新規ユーザーの登録
-        console.log('【デバッグ】setup画面: 新規ユーザーの登録処理');
         response = await registerUser({
           ...data as UpdateUserRequest
         });
       }
 
       if (response.error) {
-        console.error('【デバッグ】setup画面: API応答エラー', response.error);
-        setError(typeof response.error === 'string' ? response.error : 'エラーが発生しました');
+        // エラーを適切な型に変換して処理
+        const errorMessage = typeof response.error === 'string'
+          ? response.error
+          : response.error.message || 'エラーが発生しました';
+        setError(errorMessage);
       } else {
-        console.log('【デバッグ】setup画面: ユーザー情報保存成功');
-
-        // セッションストレージとローカルストレージの両方にリフレッシュフラグを設定
-        console.log('【デバッグ】setup画面: リフレッシュフラグを設定します');
-        const timestamp = Date.now(); // タイムスタンプを生成
+        // セッションストレージとローカルストレージにリフレッシュフラグを設定
         window.sessionStorage.setItem('lunchnow_needs_refresh', 'true');
-        window.sessionStorage.setItem('lunchnow_refresh_timestamp', timestamp.toString());
-        // バックアップとしてローカルストレージにも設定（タブ間共有のため）
         window.localStorage.setItem('lunchnow_needs_refresh', 'true');
-        window.localStorage.setItem('lunchnow_refresh_timestamp', timestamp.toString());
-        console.log('【デバッグ】setup画面: リフレッシュフラグ設定後の状態 (sessionStorage):', window.sessionStorage.getItem('lunchnow_needs_refresh'));
-        console.log('【デバッグ】setup画面: リフレッシュタイムスタンプ:', timestamp);
 
-        // 成功時はユーザー一覧ページへ
-        console.log('【デバッグ】setup画面: ユーザー一覧ページへ遷移します');
-
-        // タイムスタンプをクエリパラメータに追加（キャッシュ回避用）
-        const userPageUrl = `/users?from=setup&t=${timestamp}`;
-        console.log('【デバッグ】setup画面: 遷移先URL:', userPageUrl);
-
-        // startTransitionを使用してナビゲーションの問題を回避
-        startTransition(() => {
-          // Next.jsのルーターを使用した遷移
-          router.push(userPageUrl);
-        });
-
-        // バックアップとして window.location も準備（ルーター遷移に問題がある場合用）
-        setTimeout(() => {
-          console.log('【デバッグ】setup画面: 強制遷移のタイムアウトが発動しました');
-          window.location.href = userPageUrl;
-        }, 500);
+        // window.locationを使用して直接遷移（より確実な遷移方法）
+        window.location.href = '/users?from=setup';
       }
     } catch (err) {
-      console.error('【デバッグ】setup画面: 例外発生', err);
       console.error('ユーザー情報保存エラー:', err);
       setError(API_ERROR_MESSAGES.NETWORK_ERROR);
     } finally {
