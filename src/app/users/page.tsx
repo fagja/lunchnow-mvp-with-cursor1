@@ -13,6 +13,7 @@ import { RECRUITING_EXPIRY_MINUTES } from '@/constants/app-settings';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { useMatchPolling } from './hooks/useMatchPolling';
+import { navigateToSetup, navigateToChat } from '@/lib/navigation-utils';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -40,7 +41,11 @@ export default function UsersPage() {
           setError('データの取得に失敗しました。しばらく待ってから再試行してください。');
           setUsers([]); // 空の配列を設定して表示を更新
         } else {
-          setError(response.error);
+          // ApiErrorオブジェクトまたは文字列を適切に処理
+          const errorMessage = typeof response.error === 'object' && response.error.message
+            ? response.error.message
+            : String(response.error);
+          setError(errorMessage);
         }
       } else {
         setUsers(response.data || []);
@@ -125,7 +130,6 @@ export default function UsersPage() {
         }
       } catch (error) {
         if (isMountedRef.current) {
-          console.error('初期化エラー:', error);
           setError(API_ERROR_MESSAGES.NETWORK_ERROR);
         }
       } finally {
@@ -179,7 +183,7 @@ export default function UsersPage() {
         // エラーメッセージがオブジェクトの場合、message プロパティを使用
         const errorMessage = typeof response.error === 'object' && response.error.message
           ? response.error.message
-          : response.error;
+          : String(response.error);
         setError(errorMessage);
         return;
       }
@@ -195,7 +199,7 @@ export default function UsersPage() {
       setUsers(updatedUsers);
 
       // マッチした場合、マッチモーダルを表示
-      if (response.data?.match) {
+      if (response.data && 'id' in response.data) {
         const matchedUserData = users.find(user => user.id === userId) || null;
         setMatchedUser(matchedUserData);
         setShowMatchModal(true);
@@ -219,24 +223,18 @@ export default function UsersPage() {
   // マッチモーダルを閉じてチャット画面に遷移
   const handleMatchModalClose = () => {
     setShowMatchModal(false);
-    router.push('/chat');
+    navigateToChat(router);
   };
 
   // プロフィール編集画面に遷移
   const handleEditProfile = () => {
     console.log('プロフィール編集ボタンがクリックされました');
 
-    // 要件定義通り、画面遷移時に明示的にポーリングを停止
-    stopPolling();
-
-    // 状態更新と遷移のタイミングを確保
-    Promise.resolve().then(() => {
-      // edit=trueパラメータを追加して、編集モードで開く
-      router.push('/setup?edit=true');
-    }).catch(err => {
-      console.error('遷移中にエラーが発生しました:', err);
-      // フォールバック
-      window.location.href = '/setup?edit=true';
+    // ナビゲーションユーティリティを使用して遷移
+    navigateToSetup(router, {
+      isEdit: true,
+      beforeNavigate: stopPolling,
+      fallbackUrl: '/setup?edit=true'
     });
   };
 

@@ -1,51 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { ProfileForm } from '@/components/forms/profile-form';
-import { fetchUser, registerUser, updateUser } from '@/api/users';
+import { registerUser, updateUser } from '@/api/users';
 import { getUserId } from '@/lib/storage-utils';
 import { UpdateUserRequest } from '@/types/api.types';
-import { User } from '@/types/database.types';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { useUserData } from '@/hooks/useUserData';
+import { getInitialFormData } from '@/lib/form-utils';
+import { navigateFromSetupToUsers } from '@/lib/navigation-utils';
+
+// テストモードフラグ - テスト時にはtrueに設定
+const TEST_NAVIGATION_UTILS = true;
 
 export default function SetupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isEditMode = searchParams.get('edit') === 'true';
-  const [user, setUser] = useState<Partial<User> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 既存ユーザーの情報を取得
-  useEffect(() => {
-    async function loadUserData() {
-      try {
-        setLoading(true);
-        const userId = getUserId();
-
-        if (userId) {
-          const response = await fetchUser(userId);
-
-          if (response.data) {
-            setUser(response.data);
-          }
-        }
-      } catch (err) {
-        console.error('ユーザー情報取得エラー:', err);
-        setError(API_ERROR_MESSAGES.NETWORK_ERROR);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadUserData();
-  }, []);
+  // カスタムフックを使ってユーザーデータを取得
+  const { user, loading: userLoading, error: userError } = useUserData();
 
   // フォーム送信処理
-  const handleSubmit = async (data: Partial<User>) => {
+  const handleSubmit = async (data: UpdateUserRequest) => {
     try {
       setLoading(true);
       const userId = getUserId();
@@ -55,12 +37,12 @@ export default function SetupPage() {
       if (userId) {
         // 既存ユーザーの更新
         response = await updateUser({
-          ...data as UpdateUserRequest
+          ...data
         });
       } else {
         // 新規ユーザーの登録
         response = await registerUser({
-          ...data as UpdateUserRequest
+          ...data
         });
       }
 
@@ -71,12 +53,15 @@ export default function SetupPage() {
           : response.error.message || 'エラーが発生しました';
         setError(errorMessage);
       } else {
-        // セッションストレージとローカルストレージにリフレッシュフラグを設定
-        window.sessionStorage.setItem('lunchnow_needs_refresh', 'true');
-        window.localStorage.setItem('lunchnow_needs_refresh', 'true');
-
-        // window.locationを使用して直接遷移（より確実な遷移方法）
-        window.location.href = '/users?from=setup';
+        if (TEST_NAVIGATION_UTILS) {
+          // navigateFromSetupToUsers関数を使用
+          navigateFromSetupToUsers(router);
+        } else {
+          // window.location.hrefを使用した確実な遷移
+          window.sessionStorage.setItem('lunchnow_needs_refresh', 'true');
+          window.localStorage.setItem('lunchnow_needs_refresh', 'true');
+          window.location.href = '/users?from=setup';
+        }
       }
     } catch (err) {
       console.error('ユーザー情報保存エラー:', err);
@@ -86,41 +71,23 @@ export default function SetupPage() {
     }
   };
 
-  // ユーザーデータとフォーム表示モードを組み合わせた初期データを作成
-  const getInitialFormData = () => {
-    // ユーザーデータがない場合は空オブジェクトを返す
-    if (!user) return {};
+  // エラー表示の統合
+  const displayError = error || userError;
 
-    // 編集モードでない場合はプロフィール情報のみを返す
-    if (!isEditMode) {
-      return {
-        nickname: user.nickname || '',
-        grade: user.grade || '',
-        department: user.department || ''
-      };
-    }
-
-    // 編集モードの場合はプロフィール情報とステータス情報の両方を返す
-    return {
-      nickname: user.nickname || '',
-      grade: user.grade || '',
-      department: user.department || '',
-      end_time: user.end_time || '',
-      place: user.place || ''
-    };
-  };
+  // 読み込み状態の統合
+  const isLoading = loading || userLoading;
 
   return (
     <PageContainer>
       <div className="w-full max-w-md mx-auto py-8">
         <h1 className="text-2xl font-bold mb-6 text-center">ランチ設定</h1>
 
-        <ErrorMessage error={error} />
+        <ErrorMessage error={displayError} />
 
         <ProfileForm
-          initialData={getInitialFormData()}
+          initialData={getInitialFormData(user, isEditMode)}
           onSubmit={handleSubmit}
-          isLoading={loading}
+          isLoading={isLoading}
           isEditMode={isEditMode}
         />
       </div>

@@ -20,11 +20,18 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
 
   // initialDataが変更されたら再設定する
   useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      ...initialData
-    }));
-  }, [initialData]);
+    // 値が変更された場合のみ更新
+    if (JSON.stringify(initialData) !== JSON.stringify(formData)) {
+      console.log('ProfileForm: initialDataが変更されました', initialData);
+
+      setFormData(prev => ({
+        ...prev,
+        ...initialData
+      }));
+
+      console.log('ProfileForm: isEditMode', isEditMode);
+    }
+  }, [initialData, isEditMode]);
 
   // end_timeの選択肢を生成
   const [endTimeOptions, setEndTimeOptions] = useState<Array<{ value: string, label: string }>>([]);
