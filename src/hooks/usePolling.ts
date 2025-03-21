@@ -4,6 +4,20 @@ import { useErrorHandler } from './useErrorHandler';
 import { BasePollingOptions, PollingState, PollingResult } from '@/types/polling';
 
 /**
+ * ポーリング設定参照オブジェクト型
+ * useRef で保持するポーリング設定値
+ */
+type PollingConfigRefs = {
+  maxAttempts?: number;
+  enabled: boolean;
+  fetchFn: () => Promise<any>;
+  stopCondition?: (data: any) => boolean;
+  interval: number;
+  retryInterval: number;
+  detectVisibility: boolean;
+};
+
+/**
  * 共通ポーリングユーティリティフック
  *
  * @param fetchFn データを取得する非同期関数
@@ -46,46 +60,43 @@ export function usePolling<T>(
   });
 
   // インターバルIDの参照
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  // 非表示状態の追跡用参照
-  const isVisibleRef = useRef<boolean>(true);
-  // マウント状態の追跡用参照
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ポーリング状態の参照
   const isMountedRef = useRef<boolean>(true);
-  // エラー状態の追跡用参照
+  const isVisibleRef = useRef<boolean>(true);
   const hasErrorRef = useRef<boolean>(false);
-  // 最大試行回数の参照
-  const maxAttemptsRef = useRef<number | undefined>(maxAttempts);
-  // 試行回数の参照
   const attemptsRef = useRef<number>(0);
-  // 有効状態の参照
-  const enabledRef = useRef<boolean>(enabled);
-  // fetchFnの参照
-  const fetchFnRef = useRef(fetchFn);
-  // stopConditionの参照
-  const stopConditionRef = useRef(stopCondition);
-  // intervalの参照
-  const intervalRef2 = useRef(interval);
-  // retryIntervalの参照
-  const retryIntervalRef = useRef(retryInterval);
-  // detectVisibilityの参照
-  const detectVisibilityRef = useRef(detectVisibility);
+
+  // ポーリング設定の参照
+  const configRef = useRef<PollingConfigRefs>({
+    maxAttempts,
+    enabled,
+    fetchFn,
+    stopCondition,
+    interval,
+    retryInterval,
+    detectVisibility,
+  });
 
   // 参照値を更新
   useEffect(() => {
-    maxAttemptsRef.current = maxAttempts;
-    enabledRef.current = enabled;
-    fetchFnRef.current = fetchFn;
-    stopConditionRef.current = stopCondition;
-    intervalRef2.current = interval;
-    retryIntervalRef.current = retryInterval;
-    detectVisibilityRef.current = detectVisibility;
+    configRef.current = {
+      maxAttempts,
+      enabled,
+      fetchFn,
+      stopCondition,
+      interval,
+      retryInterval,
+      detectVisibility,
+    };
   }, [maxAttempts, enabled, fetchFn, stopCondition, interval, retryInterval, detectVisibility]);
 
   // ポーリング停止関数
   const stopPolling = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
 
       if (isMountedRef.current) {
         setState((prev) => ({
@@ -111,7 +122,7 @@ export function usePolling<T>(
         attempts: attemptsRef.current
       }));
 
-      const result = await fetchFnRef.current();
+      const result = await configRef.current.fetchFn();
 
         // マウント状態でないならリターン
         if (!isMountedRef.current) return;
@@ -127,7 +138,7 @@ export function usePolling<T>(
         hasErrorRef.current = false;
 
         // 停止条件が指定されていて条件が真の場合はポーリングを停止
-      if (stopConditionRef.current && stopConditionRef.current(result)) {
+      if (configRef.current.stopCondition && configRef.current.stopCondition(result)) {
           stopPolling();
         }
       } catch (error) {
@@ -145,15 +156,15 @@ export function usePolling<T>(
         }));
 
         // エラー時にはポーリングを一時停止し、retryIntervalで再開
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = setTimeout(() => {
-          if (isMountedRef.current && isVisibleRef.current && enabledRef.current) {
-            intervalRef.current = setInterval(() => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          if (isMountedRef.current && isVisibleRef.current && configRef.current.enabled) {
+            timerRef.current = setInterval(() => {
               executePollRef.current();
-            }, intervalRef2.current);
+            }, configRef.current.interval);
           }
-        }, retryIntervalRef.current) as unknown as NodeJS.Timeout;
+        }, configRef.current.retryInterval) as unknown as NodeJS.Timeout;
       }
     }
   });
@@ -161,16 +172,16 @@ export function usePolling<T>(
   // ポーリング開始関数
   const startPolling = useCallback(() => {
     // すでにポーリング中の場合は何もしない
-    if (intervalRef.current) return;
+    if (timerRef.current) return;
 
     // 最大試行回数に達した場合は何もしない
-    if (maxAttemptsRef.current && attemptsRef.current >= maxAttemptsRef.current) return;
+    if (configRef.current.maxAttempts && attemptsRef.current >= configRef.current.maxAttempts) return;
 
     // 非表示状態の場合は何もしない
-    if (detectVisibilityRef.current && !isVisibleRef.current) return;
+    if (configRef.current.detectVisibility && !isVisibleRef.current) return;
 
     // enabledがfalseの場合は何もしない
-    if (!enabledRef.current) return;
+    if (!configRef.current.enabled) return;
 
     // ポーリング状態を更新
     setState((prev) => ({ ...prev, isPolling: true }));
@@ -181,16 +192,16 @@ export function usePolling<T>(
     }
 
     // 通常間隔のポーリングを開始
-    intervalRef.current = setInterval(() => {
+    timerRef.current = setInterval(() => {
       executePollRef.current();
-    }, intervalRef2.current);
+    }, configRef.current.interval);
   }, [immediate]); // 依存配列を最小限に抑える
 
   // 手動実行関数
   const refetch = useCallback(async () => {
     try {
       setState((prev) => ({ ...prev, isLoading: true }));
-      const result = await fetchFnRef.current();
+      const result = await configRef.current.fetchFn();
 
       if (isMountedRef.current) {
         setState((prev) => ({
@@ -234,7 +245,7 @@ export function usePolling<T>(
 
   // ページの可視性変更を検出する
   useEffect(() => {
-    if (!detectVisibilityRef.current) return;
+    if (!configRef.current.detectVisibility) return;
 
     const handleVisibilityChange = () => {
       const isVisible = !document.hidden;
@@ -263,30 +274,30 @@ export function usePolling<T>(
 
   // enabledオプションの変更を監視
   useEffect(() => {
-    if (enabled) {
+    if (configRef.current.enabled) {
       startPolling();
     } else {
       stopPolling();
     }
-  }, [enabled, startPolling, stopPolling]);
+  }, [configRef.current.enabled, startPolling, stopPolling]);
 
   // 初期化と後処理
   useEffect(() => {
     isMountedRef.current = true;
 
-    if (immediate && enabled) {
+    if (immediate && configRef.current.enabled) {
       startPolling();
     }
 
     // クリーンアップ関数
     return () => {
       isMountedRef.current = false;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
-  }, [immediate, enabled, startPolling]);
+  }, [immediate, configRef.current.enabled, startPolling]);
 
   return {
     ...state,

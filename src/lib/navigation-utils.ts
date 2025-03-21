@@ -7,6 +7,7 @@ import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.share
  * @property {Function} beforeNavigate - 遷移前に実行するコールバック関数
  * @property {boolean} forceFullReload - フルリロードで遷移するかどうか
  * @property {string[]} storageFlags - 遷移時に設定するストレージフラグの配列
+ * @property {Record<string, string>} queryParams - 追加のクエリパラメータ
  */
 export type NavigationOptions = {
   isEdit?: boolean;
@@ -14,6 +15,7 @@ export type NavigationOptions = {
   beforeNavigate?: () => void | Promise<void>;
   forceFullReload?: boolean; // フルリロードを強制するフラグ
   storageFlags?: string[]; // 遷移時に設定するストレージフラグ
+  queryParams?: Record<string, string>; // 追加のクエリパラメータ
 };
 
 /**
@@ -44,14 +46,25 @@ export async function navigateTo(
 
     // クエリパラメータの構築
     let url = path;
-    const queryParams = [];
+    const queryParamsObj: Record<string, string> = {};
 
+    // 編集モードフラグを追加
     if (options.isEdit) {
-      queryParams.push('edit=true');
+      queryParamsObj.edit = 'true';
     }
 
-    if (queryParams.length > 0) {
-      url = `${path}?${queryParams.join('&')}`;
+    // 追加のクエリパラメータを統合
+    if (options.queryParams) {
+      Object.assign(queryParamsObj, options.queryParams);
+    }
+
+    // クエリパラメータ文字列の構築
+    const queryParams = Object.entries(queryParamsObj)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&');
+
+    if (queryParams) {
+      url = `${path}?${queryParams}`;
     }
 
     // フルリロードが必要な場合
@@ -63,6 +76,7 @@ export async function navigateTo(
     // 通常のNext.jsルーティング
     router.push(url);
   } catch (err) {
+    console.error('Navigation error:', err);
     // フォールバック処理
     if (options.fallbackUrl) {
       window.location.href = options.fallbackUrl;

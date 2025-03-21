@@ -23,6 +23,20 @@ export function createUserIdError<T>(): ApiResponse<T> {
 }
 
 /**
+ * APIリクエスト前に認証チェックを行い、必要に応じてエラーレスポンスを返す
+ * @returns 認証が必要かつユーザーIDがない場合はエラーレスポンス、それ以外はnull
+ */
+export function checkAuthentication<T>(): ApiResponse<T> | null {
+  const userId = getUserId();
+
+  if (!userId) {
+    return createUserIdError<T>();
+  }
+
+  return null;
+}
+
+/**
  * GET リクエストを送信
  * @param url リクエスト先URL
  * @param options フェッチオプション
