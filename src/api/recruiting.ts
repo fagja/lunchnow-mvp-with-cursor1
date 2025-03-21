@@ -32,8 +32,19 @@ async function fetchRecruitingUsersBase(
   console.log('【デバッグ】API呼び出しURL:', apiUrl);
   console.log('【デバッグ】currentUserId:', currentUserId);
 
+  // キャッシュを無効化するフェッチオプションを作成
+  const fetchOptions: RequestInit = {
+    ...options,
+    cache: 'no-store', // キャッシュを無効化
+    headers: {
+      ...options?.headers,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
+    }
+  };
+
   try {
-    const response = await fetchApi<RecruitingUsersResponse['data']>(apiUrl, options);
+    const response = await fetchApi<RecruitingUsersResponse['data']>(apiUrl, fetchOptions);
     console.log('【デバッグ】API応答:', response);
     return response;
   } catch (error) {
