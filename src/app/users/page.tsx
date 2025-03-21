@@ -224,8 +224,8 @@ export default function UsersPage() {
       safeSetState(setUsers, updatedUsers);
 
       // マッチした場合、マッチモーダルを表示
-      if (response.data && 'id' in response.data) {
-        console.log('マッチング成立:', response.data.id);
+      if (response.data && 'match' in response.data && response.data.match) {
+        console.log('マッチング成立:', response.data.match.id);
         const matchedUserData = users.find(user => user.id === userId) || null;
         safeSetState(setMatchedUser, matchedUserData);
         safeSetState(setShowMatchModal, true);

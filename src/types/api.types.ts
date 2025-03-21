@@ -102,7 +102,14 @@ export type RecruitingUsersResponse = ApiResponse<RecruitingUser[]>;
 /**
  * いいねレスポンス
  */
-export type LikeResponse = ApiResponse<Like>;
+export type LikeResponse = ApiResponse<Like | LikeWithMatch>;
+
+/**
+ * マッチング情報を含むいいねレスポンス用の型
+ */
+export type LikeWithMatch = Like & {
+  match: Match | null;
+};
 
 /**
  * マッチ取得レスポンス

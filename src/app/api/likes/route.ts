@@ -55,7 +55,22 @@ export async function POST(request: NextRequest) {
       return createErrorResponse<Like>('エラーが発生しました', 500);
     }
 
-    return createSuccessResponse<Like>(data, 201);
+    // 相互いいねの確認とマッチング作成
+    const { data: match, error: matchError } = await supabase.rpc('create_match', {
+      p_user_id_1: fromUserId,
+      p_user_id_2: toUserId
+    });
+
+    if (matchError) {
+      // マッチング作成に失敗してもいいね自体は成功しているので、エラーログだけ出力
+      logError('マッチング確認・作成', matchError);
+    }
+
+    // マッチング情報を含めてレスポンスを返す（マッチングがなければnull）
+    return createSuccessResponse({
+      ...data,
+      match: match || null
+    }, 201);
   } catch (error) {
     logError('いいね登録処理の例外', error);
     return createErrorResponse<Like>('エラーが発生しました', 500);
