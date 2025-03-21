@@ -89,6 +89,8 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
         });
       } else {
         console.log('[useMatchPolling] マッチングデータなし');
+        // マッチングがない場合はフラグをリセット
+        matchFoundRef.current = false;
       }
 
       return matchData;
@@ -96,43 +98,6 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
       console.error('[useMatchPolling] 例外発生:', error);
       throw error;
     }
-  });
-
-  // マッチングデータの変更を検出し、コールバックを実行するエフェクト
-  useEffect(() => {
-    const matchData = currentMatchDataRef.current;
-
-    // マッチングが見つかり、前回と異なる場合のみ処理
-    if (matchData && matchData.match_id && matchData.match_id !== lastMatchIdRef.current) {
-      // マッチIDを更新
-      lastMatchIdRef.current = matchData.match_id;
-      // マッチフラグを設定
-      matchFoundRef.current = true;
-
-      console.log('[useMatchPolling] 新しいマッチング発見!', {
-        matchId: matchData.match_id,
-        userId: matchData.user_id
-      });
-
-      // マッチング発見時のコールバック実行
-      if (onMatchFoundRef.current) {
-        console.log('[useMatchPolling] マッチング発見コールバック実行');
-        onMatchFoundRef.current(matchData);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [/* currentMatchDataRef.current */]); // refオブジェクト自体を依存に入れると無限ループになるためコメントアウト
-
-  // 停止条件関数 - refで管理して依存配列の問題を回避
-  const stopConditionRef = useRef((matchData: MatchedUser | null) => {
-    if (!matchData) return false;
-
-    // マッチングが見つかっていて、stopOnMatchが有効なら停止
-    const shouldStop = matchFoundRef.current && stopOnMatchRef.current;
-    if (shouldStop) {
-      console.log('[useMatchPolling] 停止条件達成 - ポーリング停止');
-    }
-    return shouldStop;
   });
 
   // 安定したfetch関数
@@ -157,8 +122,71 @@ export function useMatchPolling(options: MatchPollingOptions = {}) {
   // 共通ポーリングフックを使用
   const polling = usePolling<MatchedUser | null>(stableFetchFn, pollingOptions);
 
+  // マッチングデータの変更を検出し、コールバックを実行するエフェクト
+  useEffect(() => {
+    const matchData = currentMatchDataRef.current;
+
+    console.log('[useMatchPolling] マッチングデータ変更検出', {
+      hasMatchData: !!matchData,
+      matchId: matchData?.match_id,
+      lastMatchId: lastMatchIdRef.current,
+      matchFoundFlag: matchFoundRef.current
+    });
+
+    // マッチングが見つかり、前回と異なる場合のみ処理
+    if (matchData && matchData.match_id &&
+        (matchData.match_id !== lastMatchIdRef.current || !matchFoundRef.current)) {
+      // マッチIDを更新
+      lastMatchIdRef.current = matchData.match_id;
+      // マッチフラグを設定
+      matchFoundRef.current = true;
+
+      console.log('[useMatchPolling] 新しいマッチング発見!', {
+        matchId: matchData.match_id,
+        userId: matchData.user_id
+      });
+
+      // マッチング発見時のコールバック実行
+      if (onMatchFoundRef.current) {
+        console.log('[useMatchPolling] マッチング発見コールバック実行');
+        onMatchFoundRef.current(matchData);
+      }
+    } else if (matchData && matchData.match_id) {
+      console.log('[useMatchPolling] マッチングは見つかりましたが、既に検出済みです', {
+        matchId: matchData.match_id,
+        lastMatchId: lastMatchIdRef.current,
+        matchFoundFlag: matchFoundRef.current
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [polling?.data]); // polling?.dataを依存配列に追加し、オプショナルチェーンを使用
+
+  // 停止条件関数 - refで管理して依存配列の問題を回避
+  const stopConditionRef = useRef((matchData: MatchedUser | null) => {
+    if (!matchData) return false;
+
+    // マッチングが見つかっていて、stopOnMatchが有効なら停止
+    const shouldStop = matchFoundRef.current && stopOnMatchRef.current;
+    if (shouldStop) {
+      console.log('[useMatchPolling] 停止条件達成 - ポーリング停止');
+    }
+    return shouldStop;
+  });
+
+  // 開始時にマッチングフラグをリセットするカスタム開始関数
+  const startPolling = useCallback(() => {
+    // マッチングフラグをリセットして新しいマッチングを検出できるようにする
+    console.log('[useMatchPolling] マッチング検出フラグをリセット');
+    matchFoundRef.current = false;
+
+    // 元のポーリング開始
+    polling.startPolling();
+  }, [polling]);
+
   return {
     ...polling,
+    // カスタム開始関数でオーバーライド
+    startPolling,
     // lastMatchIdがあればマッチしていると判断する補助関数
     hasMatch: !!lastMatchIdRef.current
   };
