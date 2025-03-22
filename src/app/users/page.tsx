@@ -1,225 +1,218 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import useSWR from "swr";
-import { Button } from "@/components/ui/button";
-import { PageContainer } from "@/components/ui/page-container";
-import { Spinner } from "@/components/ui/spinner";
-import { SimpleMessage } from "@/components/ui/simple-message";
-import { Modal } from "@/components/ui/modal";
-import { UserCard } from "@/components/shared/users/UserCard";
-import { 
-  fetchRecruitingUsers, 
-  getRecruitingUsersKey, 
-  getRecruitingSwrOptions 
-} from "@/api/recruiting";
-import { createLike } from "@/api/likes";
-import { checkMatchStatus } from "@/api/matches";
-import { getUserIdFromLocalStorage } from "@/api/api-client";
-import { RecruitingUser } from "@/types/database.types";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { UserCard } from '@/components/shared/users/UserCard';
+import { Spinner } from '@/components/ui/spinner';
+import MatchPopup from '@/components/shared/users/MatchPopup';
+import { RecruitingUser } from '@/types/database.types';
+import { getUserId } from '@/lib/utils';
+import { useRecruitingUsers } from '@/api/recruiting';
+import { createLike } from '@/api/likes';
+import { ERROR_CODES } from '@/lib/constants';
 
-/**
- * ユーザー一覧画面コンポーネント
- * 未マッチのユーザーリストを表示し、いいね機能を提供する
- */
 export default function UsersPage() {
-  const router = useRouter();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [likedUserIds, setLikedUserIds] = useState<number[]>([]);
   const [showMatchPopup, setShowMatchPopup] = useState(false);
   const [matchedUser, setMatchedUser] = useState<RecruitingUser | null>(null);
-  const [isLiking, setIsLiking] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState("");
+  const [loadingLike, setLoadingLike] = useState<number | null>(null);
+  const router = useRouter();
 
-  // 募集中ユーザーデータ取得
-  const { 
-    data: usersData, 
-    error: usersError, 
-    mutate: refreshUsers, 
-    isLoading: isLoadingUsers 
-  } = useSWR(
-    getRecruitingUsersKey(),
-    fetchRecruitingUsers,
-    getRecruitingSwrOptions()
-  );
-
-  // マッチング状態確認（7秒間隔）
-  const { 
-    data: matchData, 
-    error: matchError,
-    mutate: refreshMatch 
-  } = useSWR(
-    getUserIdFromLocalStorage() ? `/api/matches/check?userId=${getUserIdFromLocalStorage()}` : null,
-    checkMatchStatus,
-    {
-      refreshInterval: 7000, // 7秒間隔
-      revalidateOnFocus: true,
-      dedupingInterval: 3000
-    }
-  );
-
-  // マッチング状態の監視
+  // ユーザーIDが取得できない場合はログインページにリダイレクト
   useEffect(() => {
-    if (matchData?.data && matchData.data.isMatched) {
-      // マッチが見つかった場合、マッチングユーザー情報を設定
-      const matchedUserInfo = usersData?.data?.find(
-        (user) => user.id === matchData.data.matchedWithUserId
-      ) || null;
-      
-      if (matchedUserInfo) {
-        setMatchedUser(matchedUserInfo);
-        setShowMatchPopup(true);
-      } else {
-        // ユーザー情報が見つからない場合は直接チャット画面へ
-        router.push('/chat');
-      }
+    const userId = getUserId();
+    if (!userId) {
+      router.push('/setup');
     }
-  }, [matchData, usersData, router]);
+  }, [router]);
+
+  // 募集中ユーザー一覧を取得
+  const { data: usersData, error: usersError, isLoading, mutate: refreshUsers } = useRecruitingUsers(currentPage, 10);
+
+  // ユーザーデータとエラーハンドリング
+  const users = usersData?.data?.users || [];
+  const isError = usersError || usersData?.error;
+
+  // ページネーション情報
+  const totalPages = usersData?.data?.pagination?.totalPages || 1;
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
+
+  // いいねが成功したときの処理
+  const handleLikeSuccess = async (likedUserId: number, isMatched: boolean, matchedUserData?: RecruitingUser) => {
+    setLikedUserIds((prev) => [...prev, likedUserId]);
+    setLoadingLike(null);
+
+    // マッチした場合、ポップアップを表示
+    if (isMatched && matchedUserData) {
+      setMatchedUser(matchedUserData);
+      setShowMatchPopup(true);
+    }
+
+    // ユーザー一覧を再取得
+    refreshUsers();
+  };
 
   // いいね処理
-  const handleLike = async (userId: number) => {
-    if (isLiking) return;
-    
-    setIsLiking(true);
-    
+  const handleLike = async (user: RecruitingUser) => {
     try {
-      const currentUserId = getUserIdFromLocalStorage();
-      if (!currentUserId) {
-        console.error("ユーザーIDが見つかりません");
+      if (loadingLike !== null) return; // 既に処理中の場合は何もしない
+
+      const userId = getUserId();
+      if (!userId) {
+        router.push('/setup');
         return;
       }
-      
-      const response = await createLike({
-        fromUserId: currentUserId,
-        toUserId: userId
-      });
-      
-      // いいね成功後にユーザーリスト更新
-      if (response.data) {
-        await refreshUsers();
-        
-        // いいね後すぐにマッチング状態を確認
-        const matchStatus = await refreshMatch();
-        
-        if (matchStatus?.data?.isMatched && matchStatus.data.matchedWithUserId === userId) {
-          // マッチングしたユーザーを特定
-          const matchedUserInfo = usersData?.data?.find(user => user.id === userId) || null;
-          
-          if (matchedUserInfo) {
-            setMatchedUser(matchedUserInfo);
-            setShowMatchPopup(true);
-          }
-        }
+
+      setLoadingLike(user.id);
+
+      // いいねを送信
+      const likeResponse = await createLike(user.id);
+
+      if (likeResponse.error) {
+        console.error('いいねの送信に失敗しました:', likeResponse.error);
+        setLoadingLike(null);
+        return;
       }
+
+      // マッチの有無を確認
+      const isMatched = likeResponse.data?.isMatched || false;
+
+      // マッチ成功時の処理
+      handleLikeSuccess(user.id, isMatched, user);
+
     } catch (error) {
-      console.error("いいね処理中にエラーが発生しました:", error);
-    } finally {
-      setIsLiking(false);
+      console.error('いいねの送信中にエラーが発生しました:', error);
+      setLoadingLike(null);
     }
   };
 
-  // 手動更新処理
-  const handleRefresh = async () => {
-    await refreshUsers();
-    setLastRefreshed(new Date().toLocaleTimeString());
-  };
-
-  // マッチングポップアップでOKが押された時の処理
-  const handleMatchConfirm = () => {
+  // ポップアップを閉じる
+  const closeMatchPopup = () => {
     setShowMatchPopup(false);
-    router.push('/chat');
+    setMatchedUser(null);
   };
 
-  // 初回ロード時に最終更新時刻を設定
-  useEffect(() => {
-    if (!isLoadingUsers && usersData) {
-      setLastRefreshed(new Date().toLocaleTimeString());
+  // 次のページへ移動
+  const goToNextPage = () => {
+    if (hasNextPage) {
+      setCurrentPage(currentPage + 1);
     }
-  }, [isLoadingUsers, usersData]);
+  };
 
-  return (
-    <PageContainer>
-      {/* ヘッダー部分 */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-        <Button
-          variant="outline"
-          onClick={() => router.push('/setup')}
-          className="w-full sm:w-auto"
-        >
-          プロフィール・ステータス編集
-        </Button>
-        
-        <div className="text-center text-sm">
-          <div>募集状態は20分間有効です</div>
-          <div className="text-xs text-muted-foreground">
-            最終更新: {lastRefreshed || "--:--"}
-          </div>
-        </div>
-        
-        <Button
-          onClick={handleRefresh}
-          disabled={isLoadingUsers}
-          className="w-full sm:w-auto"
-        >
-          {isLoadingUsers ? <Spinner className="h-4 w-4 mr-2" /> : null}
-          更新
-        </Button>
+  // 前のページへ移動
+  const goToPrevPage = () => {
+    if (hasPrevPage) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // ローディング中表示
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Spinner />
       </div>
+    );
+  }
 
-      {/* 説明テキスト */}
-      <div className="text-sm text-center mb-6 text-muted-foreground">
-        20分経過した場合、再度ランチ設定画面に戻り、再設定してください
+  // エラー表示
+  if (isError) {
+    const errorCode = usersData?.error?.code || ERROR_CODES.UNKNOWN_ERROR;
+    const errorMessage = usersData?.error?.message || 'ユーザー情報の取得に失敗しました。';
+
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <h2 className="text-2xl font-bold text-red-600 mb-2">エラーが発生しました</h2>
+        <p className="text-gray-700 mb-4">{errorMessage}</p>
+        <p className="text-sm text-gray-500 mb-6">エラーコード: {errorCode}</p>
+        <button
+          onClick={() => refreshUsers()}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        >
+          再読み込み
+        </button>
       </div>
+    );
+  }
 
-      {/* エラー表示 */}
-      {usersError && (
-        <SimpleMessage
-          message="ユーザー情報の取得中にエラーが発生しました。しばらくしてから再試行してください。"
-          type="error"
+  // ユーザーが見つからない場合
+  if (users.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <Image
+          src="/images/no-users.svg"
+          alt="No users found"
+          width={200}
+          height={200}
           className="mb-4"
         />
+        <h2 className="text-xl font-semibold text-gray-700 mb-2">現在募集中のユーザーはいません</h2>
+        <p className="text-gray-600 mb-6 text-center">
+          しばらく経ってからもう一度お試しください。または、あなたが募集を開始してみましょう！
+        </p>
+        <button
+          onClick={() => refreshUsers()}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        >
+          再読み込み
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6 text-center">今日のランチメンバー</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {users.map((user) => (
+          <UserCard
+            key={user.id}
+            user={user}
+            onLike={() => handleLike(user)}
+            isLoading={loadingLike === user.id}
+          />
+        ))}
+      </div>
+
+      {/* ページネーション */}
+      {(hasNextPage || hasPrevPage) && (
+        <div className="flex justify-center mt-8 space-x-4">
+          <button
+            onClick={goToPrevPage}
+            disabled={!hasPrevPage}
+            className={`px-4 py-2 rounded ${
+              hasPrevPage
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            前へ
+          </button>
+          <span className="px-4 py-2 bg-gray-100 rounded">
+            {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={goToNextPage}
+            disabled={!hasNextPage}
+            className={`px-4 py-2 rounded ${
+              hasNextPage
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            次へ
+          </button>
+        </div>
       )}
 
-      {/* ユーザー一覧 */}
-      {isLoadingUsers ? (
-        <div className="flex justify-center items-center py-12">
-          <Spinner className="h-8 w-8" />
-        </div>
-      ) : usersData?.data && usersData.data.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {usersData.data.map((user) => (
-            <UserCard
-              key={user.id}
-              user={user}
-              onLike={handleLike}
-              isLoading={isLiking}
-            />
-          ))}
-        </div>
-      ) : (
-        <SimpleMessage
-          message="現在募集中のユーザーはいません。また後で確認してください。"
-          type="info"
-          className="my-8"
-        />
+      {/* マッチングポップアップ */}
+      {showMatchPopup && matchedUser && (
+        <MatchPopup user={matchedUser} onClose={closeMatchPopup} />
       )}
-
-      {/* マッチング成立ポップアップ */}
-      <Modal
-        isOpen={showMatchPopup}
-        title="マッチング成立！"
-        onClose={() => setShowMatchPopup(false)}
-        onConfirm={handleMatchConfirm}
-        confirmText="OK"
-      >
-        <div className="text-center py-2">
-          <p className="mb-2">
-            <span className="font-semibold">{matchedUser?.nickname}</span> さんとマッチングしました！
-          </p>
-          <p className="text-sm">
-            チャット画面でランチの約束をしましょう！
-          </p>
-        </div>
-      </Modal>
-    </PageContainer>
+    </div>
   );
 }

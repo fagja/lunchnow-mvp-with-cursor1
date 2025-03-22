@@ -8,8 +8,8 @@ import {
   fetchApi,
   postApi,
   patchApi,
-  getUserIdFromLocalStorage,
-  saveUserIdToLocalStorage,
+  getUserId,
+  saveUserId,
   createUserIdError
 } from './api-client';
 
@@ -29,7 +29,7 @@ export async function registerUser(userData: CreateUserRequest): Promise<UserRes
 
     // APIレスポンスからユーザーIDを取得して保存
     if (response.data && response.data.id) {
-      saveUserIdToLocalStorage(response.data.id);
+      saveUserId(response.data.id);
     }
 
     return response;
@@ -53,7 +53,7 @@ export async function registerUser(userData: CreateUserRequest): Promise<UserRes
 export async function fetchUser(userId?: number): Promise<UserResponse> {
   try {
     if (!userId) {
-      const currentUserId = getUserIdFromLocalStorage();
+      const currentUserId = getUserId();
 
       if (!currentUserId) {
         return createUserIdError<UserResponse>();
@@ -86,7 +86,7 @@ export async function fetchUsers(
   limit: number = 10
 ): Promise<UsersResponse> {
   try {
-    const userId = getUserIdFromLocalStorage();
+    const userId = getUserId();
 
     if (!userId) {
       return createUserIdError<UsersResponse>();
@@ -117,7 +117,7 @@ export async function fetchUsers(
  */
 export async function updateUser(userData: UpdateUserRequest): Promise<UserResponse> {
   try {
-    const userId = getUserIdFromLocalStorage();
+    const userId = getUserId();
 
     if (!userId) {
       return createUserIdError<UserResponse>();
@@ -142,7 +142,7 @@ export async function updateUser(userData: UpdateUserRequest): Promise<UserRespo
  */
 export async function fetchCurrentUser(): Promise<UserResponse> {
   try {
-    const userId = getUserIdFromLocalStorage();
+    const userId = getUserId();
 
     if (!userId) {
       return {
@@ -167,5 +167,5 @@ export async function fetchCurrentUser(): Promise<UserResponse> {
   }
 }
 
-// LocalStorage関連の関数をエクスポート
-export { getUserIdFromLocalStorage, saveUserIdToLocalStorage };
+// ユーザーID関連の関数をエクスポート
+export { getUserId, saveUserId };

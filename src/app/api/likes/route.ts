@@ -6,56 +6,73 @@ import {
   createErrorResponse,
   createValidationErrorResponse,
   isValidId,
-  logError
+  logError,
+  authenticateUser,
+  createAuthenticationErrorResponse
 } from '../_lib/api-utils';
+import { withUserVerification } from '../_middleware/auth';
 
 /**
  * いいね登録処理
  * POST /api/likes
  * body: { fromUserId: number, toUserId: number }
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { fromUserId, toUserId } = body;
+export const POST = withUserVerification(
+  async (request: NextRequest, authenticatedUserId: number) => {
+    try {
+      const body = await request.json();
+      const { fromUserId, toUserId } = body;
 
-    // パラメータ検証
-    if (!isValidId(fromUserId) || !isValidId(toUserId)) {
-      return createValidationErrorResponse<Like>('パラメータエラー');
-    }
-
-    // 自分自身へのいいねを防止
-    if (fromUserId === toUserId) {
-      return createValidationErrorResponse<Like>('自分自身にいいねはできません');
-    }
-
-    // いいね登録処理
-    const { data, error } = await supabase
-      .from('likes')
-      .insert([{
-        from_user_id: fromUserId,
-        to_user_id: toUserId
-      }])
-      .select('*')
-      .single();
-
-    if (error) {
-      logError('いいね登録', error);
-
-      // 一意性制約違反（すでにいいね済み）の場合は専用メッセージ
-      if (error.code === '23505') {
-        return createErrorResponse<Like>('すでにいいねしています', 409);
+      // パラメータ検証
+      if (!isValidId(fromUserId) || !isValidId(toUserId)) {
+        return createValidationErrorResponse<Like>('パラメータエラー');
       }
 
+      // リクエストのユーザーIDとCookieのユーザーIDが一致することは
+      // すでにミドルウェアで検証済み
+
+      // 自分自身へのいいねを防止
+      if (fromUserId === toUserId) {
+        return createValidationErrorResponse<Like>('自分自身にいいねはできません');
+      }
+
+      // いいね登録処理
+      const { data, error } = await supabase
+        .from('likes')
+        .insert([{
+          from_user_id: fromUserId,
+          to_user_id: toUserId
+        }])
+        .select('*')
+        .single();
+
+      if (error) {
+        logError('いいね登録', error);
+
+        // 一意性制約違反（すでにいいね済み）の場合は専用メッセージ
+        if (error.code === '23505') {
+          return createErrorResponse<Like>('すでにいいねしています', 409);
+        }
+
+        return createErrorResponse<Like>('エラーが発生しました', 500);
+      }
+
+      return createSuccessResponse<Like>(data, 201);
+    } catch (error) {
+      logError('いいね登録処理の例外', error);
       return createErrorResponse<Like>('エラーが発生しました', 500);
     }
-
-    return createSuccessResponse<Like>(data, 201);
-  } catch (error) {
-    logError('いいね登録処理の例外', error);
-    return createErrorResponse<Like>('エラーが発生しました', 500);
+  },
+  // リクエストボディからユーザーID（fromUserId）を抽出する関数
+  async (request: NextRequest): Promise<number | null> => {
+    try {
+      const body = await request.json();
+      return body.fromUserId || null;
+    } catch (e) {
+      return null;
+    }
   }
-}
+);
 
 /**
  * ユーザーごとのいいねリスト取得
@@ -63,6 +80,12 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Cookieからユーザー認証
+    const authenticatedUserId = authenticateUser();
+    if (!authenticatedUserId) {
+      return createAuthenticationErrorResponse<Like[]>();
+    }
+
     const url = new URL(request.url);
     const fromUserId = url.searchParams.get('fromUserId');
     const toUserId = url.searchParams.get('toUserId');
@@ -71,6 +94,11 @@ export async function GET(request: NextRequest) {
     // パラメータ検証（fromUserIdかtoUserIdのどちらかは必須）
     if ((!isValidId(fromUserId) && !isValidId(toUserId)) || !dateParam) {
       return createValidationErrorResponse<Like[]>('パラメータエラー');
+    }
+
+    // リクエストパラメータのユーザーIDとCookieのユーザーIDの検証
+    if (isValidId(fromUserId) && parseInt(fromUserId, 10) !== authenticatedUserId) {
+      return createErrorResponse<Like[]>('不正なユーザーIDです', 403);
     }
 
     // クエリ作成

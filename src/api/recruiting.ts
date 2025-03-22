@@ -1,65 +1,78 @@
-import { RecruitingUsersResponse } from '@/types/api.types';
-import { fetchApi, getUserIdFromLocalStorage } from './api-client';
+import { SWRResponse } from 'swr';
+import { API_BASE_URL, useSWR, createNoUserIdError } from '@/lib/api';
+import { getUserId } from '@/lib/utils';
+import { ApiResponse } from '@/types/api.types';
 
 /**
- * 募集中ユーザーリスト取得のデフォルトキャッシュ時間（秒）
+ * SWRの設定オプション
  */
-const DEFAULT_CACHE_TIME = 30; // 30秒
+export const swrOptions = {
+  revalidateOnFocus: false,
+  revalidateIfStale: false,
+  revalidateOnReconnect: true,
+  dedupingInterval: 10000, // 10秒間の重複リクエスト防止
+};
 
 /**
- * 募集中ユーザー一覧取得関数
- * SWRと組み合わせて使用するためのフェッチャー
- * @param url - SWRによって生成されたキー
- * @returns 募集中ユーザー一覧のレスポンス
+ * ランチ募集中ユーザー一覧を取得するSWRキーを生成
  */
-export async function fetchRecruitingUsers(url?: string): Promise<RecruitingUsersResponse> {
-  const currentUserId = getUserIdFromLocalStorage();
-
-  if (!currentUserId) {
-    return {
-      error: 'エラーが発生しました',
-      status: 400
-    };
-  }
-
-  // URLが指定されている場合はそのまま使用、ない場合は生成
-  const apiUrl = url || `/api/users/recruiting?currentUserId=${currentUserId}`;
-
-  try {
-    return await fetchApi<RecruitingUsersResponse>(apiUrl, {
-      // キャッシュ制御ヘッダー設定
-      cache: 'no-cache' // 常に最新データを取得
+export function getRecruitingUsersKey(page = 1, limit = 10, filters?: { [key: string]: any }) {
+  const params = new URLSearchParams();
+  
+  params.append('page', page.toString());
+  params.append('limit', limit.toString());
+  
+  // 追加のフィルタリングパラメータがあれば追加
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, value.toString());
+      }
     });
-  } catch (error) {
-    console.error('募集中ユーザー取得エラー:', error);
-    return {
-      error: 'エラーが発生しました',
-      status: 500
-    };
   }
+  
+  return `/users/recruiting?${params.toString()}`;
 }
 
 /**
- * 募集中ユーザー一覧をSWRで取得するためのキー生成関数
- * @returns SWRのキー、またはnull（ユーザーIDが取得できない場合）
+ * ランチ募集中ユーザー一覧を取得するカスタムフック
  */
-export function getRecruitingUsersKey() {
-  const currentUserId = getUserIdFromLocalStorage();
-  if (!currentUserId) return null;
-
-  return `/api/users/recruiting?currentUserId=${currentUserId}`;
+export function useRecruitingUsers(page = 1, limit = 10, filters?: { [key: string]: any }): SWRResponse {
+  return useSWR(getRecruitingUsersKey(page, limit, filters), {
+    ...swrOptions,
+  });
 }
 
 /**
- * SWR設定オプションを生成する関数
- * @param refreshInterval - 自動更新間隔（ミリ秒）
- * @returns SWR設定オプション
+ * 特定のユーザーのプロフィールを取得するSWRキーを生成
  */
-export function getRecruitingSwrOptions(refreshInterval: number = DEFAULT_CACHE_TIME * 1000) {
-  return {
-    refreshInterval, // 自動更新間隔
-    revalidateOnFocus: true, // フォーカス時に再検証
-    revalidateOnReconnect: true, // 再接続時に再検証
-    errorRetryCount: 3 // エラー時のリトライ回数
-  };
+export function getUserProfileKey(userId: number) {
+  return `/users/${userId}`;
+}
+
+/**
+ * 特定のユーザーのプロフィールを取得するカスタムフック
+ */
+export function useUserProfile(userId: number): SWRResponse {
+  return useSWR(getUserProfileKey(userId), {
+    ...swrOptions,
+  });
+}
+
+/**
+ * 現在のユーザー自身のプロフィールを取得するSWRキーを生成
+ */
+export function getMyProfileKey() {
+  const userId = getUserId();
+  if (!userId) return null;
+  return `/users/me`;
+}
+
+/**
+ * 現在のユーザー自身のプロフィールを取得するカスタムフック
+ */
+export function useMyProfile(): SWRResponse {
+  return useSWR(getMyProfileKey(), {
+    ...swrOptions,
+  });
 }

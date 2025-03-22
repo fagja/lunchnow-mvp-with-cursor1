@@ -1,109 +1,90 @@
-import { LikeResponse, CreateLikeRequest } from '@/types/api.types';
-import { fetchApi, postApi, getUserIdFromLocalStorage } from './api-client';
+import { SWRResponse } from 'swr';
+import { API_BASE_URL, createNoUserIdError, useSWR } from '@/lib/api';
+import { getUserId } from '@/lib/utils';
+import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
+import { ApiResponse } from '@/types/api.types';
 
 /**
- * APIのベースURL
+ * いいねを作成するAPI
+ * @param targetUserId いいね対象のユーザーID
+ * @returns APIレスポンス
  */
-const API_BASE_URL = '/api/likes';
-
-/**
- * ユーザーIDが存在しない場合のエラーレスポンスを生成
- */
-const createUserIdError = (): LikeResponse => ({
-  error: 'ユーザーIDが取得できません。再度ログインしてください。',
-  status: 401
-});
-
-/**
- * いいね登録関数
- * @param toUserId いいねを送るユーザーID
- */
-export async function createLike(toUserId: number): Promise<LikeResponse> {
-  const fromUserId = getUserIdFromLocalStorage();
-
-  if (!fromUserId) {
-    return createUserIdError();
-  }
-
-  const likeData: CreateLikeRequest = {
-    fromUserId,
-    toUserId
-  };
-
-  return postApi<LikeResponse>(API_BASE_URL, likeData);
-}
-
-/**
- * 送信したいいね一覧取得関数
- * @param date 日付（指定がなければ本日）
- */
-export async function fetchSentLikes(date?: string): Promise<LikeResponse> {
-  const userId = getUserIdFromLocalStorage();
-
+export async function createLike(targetUserId: number): Promise<ApiResponse<any>> {
+  const userId = getUserId();
   if (!userId) {
-    return createUserIdError();
+    return createNoUserIdError();
   }
 
-  const queryParams = new URLSearchParams({
-    fromUserId: userId.toString()
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/likes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sourceUserId: userId,
+        targetUserId,
+      }),
+    });
 
-  if (date) {
-    queryParams.append('date', date);
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating like:', error);
+    return {
+      error: {
+        code: ERROR_CODES.SERVER_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+      },
+      status: 500,
+      data: undefined
+    };
   }
-
-  return fetchApi<LikeResponse>(`${API_BASE_URL}?${queryParams.toString()}`);
 }
 
 /**
- * 受け取ったいいね一覧取得関数
- * @param date 日付（指定がなければ本日）
+ * 送信したいいね一覧を取得するSWRキーを生成
  */
-export async function fetchReceivedLikes(date?: string): Promise<LikeResponse> {
-  const userId = getUserIdFromLocalStorage();
-
-  if (!userId) {
-    return createUserIdError();
-  }
-
-  const queryParams = new URLSearchParams({
-    toUserId: userId.toString()
-  });
-
-  if (date) {
-    queryParams.append('date', date);
-  }
-
-  return fetchApi<LikeResponse>(`${API_BASE_URL}?${queryParams.toString()}`);
+export function getSentLikesKey(page = 1, limit = 10) {
+  const userId = getUserId();
+  if (!userId) return null;
+  return `/likes/sent?sourceUserId=${userId}&page=${page}&limit=${limit}`;
 }
 
 /**
- * 特定ユーザー間のいいね確認関数
- * @param fromUserId 送信元ユーザーID
- * @param toUserId 送信先ユーザーID
- * @param date 日付（指定がなければ本日）
+ * 送信したいいね一覧を取得するカスタムフック
  */
-export async function checkLikeExists(
-  fromUserId: number,
-  toUserId: number,
-  date?: string
-): Promise<boolean> {
-  const queryParams = new URLSearchParams({
-    fromUserId: fromUserId.toString(),
-    toUserId: toUserId.toString()
-  });
+export function useSentLikes(page = 1, limit = 10): SWRResponse {
+  return useSWR(getSentLikesKey(page, limit));
+}
 
-  if (date) {
-    queryParams.append('date', date);
-  }
+/**
+ * 受信したいいね一覧を取得するSWRキーを生成
+ */
+export function getReceivedLikesKey(page = 1, limit = 10) {
+  const userId = getUserId();
+  if (!userId) return null;
+  return `/likes/received?targetUserId=${userId}&page=${page}&limit=${limit}`;
+}
 
-  const response = await fetchApi<LikeResponse>(`${API_BASE_URL}?${queryParams.toString()}`);
+/**
+ * 受信したいいね一覧を取得するカスタムフック
+ */
+export function useReceivedLikes(page = 1, limit = 10): SWRResponse {
+  return useSWR(getReceivedLikesKey(page, limit));
+}
 
-  // エラーまたはデータがない場合はfalse
-  if (!response.data || response.error) {
-    return false;
-  }
+/**
+ * 特定のユーザーへのいいねが存在するか確認するSWRキーを生成
+ */
+export function getLikeExistsKey(targetUserId: number) {
+  const userId = getUserId();
+  if (!userId) return null;
+  return `/likes/exists?sourceUserId=${userId}&targetUserId=${targetUserId}`;
+}
 
-  // いいねが1件以上あればtrue
-  return Array.isArray(response.data) && response.data.length > 0;
+/**
+ * 特定のユーザーへのいいねが存在するか確認するカスタムフック
+ */
+export function useLikeExists(targetUserId: number): SWRResponse {
+  return useSWR(getLikeExistsKey(targetUserId));
 }

@@ -3,7 +3,8 @@
  */
 
 import { ApiResponse, ApiError } from '@/types/api.types';
-import { getUserId, saveUserId, localStorageKeys } from '@/lib/utils';
+import { getUserId as getStoredUserId, saveUserId as saveStoredUserId, localStorageKeys } from '@/lib/utils';
+import { STORAGE_KEYS } from "@/lib/constants";
 
 // 拡張フェッチオプション型定義
 type ExtendedFetchOptions = RequestInit & {
@@ -22,19 +23,26 @@ export const errorCodes = {
 };
 
 /**
- * LocalStorageからユーザーIDを取得
+ * 外部APIのベースURL
+ */
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_VERCEL_URL
+  ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api`
+  : 'http://localhost:3000/api';
+
+/**
+ * ユーザーIDを取得する関数
  * @returns ユーザーID（存在しない場合はnull）
  */
-export function getUserIdFromLocalStorage(): number | null {
-  return getUserId();
+export function getUserId(): number | null {
+  return getStoredUserId();
 }
 
 /**
- * LocalStorageにユーザーIDを保存
+ * ユーザーIDを保存する関数
  * @param userId ユーザーID
  */
-export function saveUserIdToLocalStorage(userId: number): void {
-  saveUserId(userId);
+export function saveUserId(userId: number): void {
+  saveStoredUserId(userId);
 }
 
 /**
@@ -247,5 +255,55 @@ async function sendRequestWithBody<T>(
       error: errorObj,
       status: 500,
     };
+  }
+}
+
+/**
+ * ユーザー認証用メソッド
+ * @param idToken Firebase認証トークン
+ * @returns APIレスポンス
+ */
+export async function authenticateUser(idToken: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ idToken }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.data?.userId) {
+      // ユーザーIDをLocalStorageに保存
+      saveUserId(data.data.userId);
+      return { success: true, userId: data.data.userId };
+    } else {
+      console.error('Authentication error:', data.error);
+      return { success: false, error: data.error || '認証に失敗しました' };
+    }
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return { success: false, error: '認証処理中にエラーが発生しました' };
+  }
+}
+
+/**
+ * ユーザーログアウト用メソッド
+ * @returns APIレスポンス
+ */
+export async function logoutUser() {
+  try {
+    // LocalStorageからユーザーIDを削除
+    localStorage.removeItem(STORAGE_KEYS.USER_ID);
+
+    // Cookieからも削除（サーバーサイドで削除処理が必要）
+    document.cookie = `${STORAGE_KEYS.USER_ID}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Logout error:', error);
+    return { success: false, error: 'ログアウト処理中にエラーが発生しました' };
   }
 }

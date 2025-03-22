@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { STORAGE_KEYS, CookieOptions } from "./constants";
 
 /**
  * tailwindのクラス名を結合するユーティリティ
@@ -11,9 +12,10 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * LocalStorage操作用ユーティリティ
+ * @deprecated 直接STORAGE_KEYSを使用してください
  */
 export const localStorageKeys = {
-  USER_ID: 'lunchnow_user_id',
+  USER_ID: STORAGE_KEYS.USER_ID,
 };
 
 /**
@@ -178,6 +180,79 @@ export function hasNoSpecialChars(
 }
 
 /**
+ * Cookieから特定の値を取得する関数
+ *
+ * @param name - 取得するCookieの名前
+ * @returns Cookieの値、存在しない場合はnull
+ */
+export function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null; // サーバーサイドでは実行しない
+  }
+
+  const cookies = document.cookie.split(';');
+  for (const cookie of cookies) {
+    const [cookieName, cookieValue] = cookie.trim().split('=');
+    if (cookieName === name) {
+      return cookieValue;
+    }
+  }
+  return null;
+}
+
+/**
+ * Cookieを設定する関数
+ *
+ * @param name - Cookieの名前
+ * @param value - Cookieの値
+ * @param options - Cookieのオプション
+ */
+export function setCookie(
+  name: string,
+  value: string,
+  options: CookieOptions = {}
+): void {
+  if (typeof document === 'undefined') {
+    return; // サーバーサイドでは実行しない
+  }
+
+  const {
+    days = 30,
+    path = '/',
+    sameSite = 'Lax',
+    secure = window.location.protocol === 'https:', // 開発環境では自動的にfalse、本番環境ではtrue
+  } = options;
+
+  // 有効期限の設定
+  const expires = days ? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString() : '';
+
+  // Cookieの設定
+  let cookieString = `${name}=${value}`;
+  if (expires) cookieString += `; expires=${expires}`;
+  if (path) cookieString += `; path=${path}`;
+  if (sameSite) cookieString += `; SameSite=${sameSite}`;
+  if (secure) cookieString += '; Secure';
+  // HttpOnlyは設定しない（クライアント側でもアクセス可能にする）
+
+  document.cookie = cookieString;
+}
+
+/**
+ * Cookieを削除する関数
+ *
+ * @param name - 削除するCookieの名前
+ * @param path - Cookieのパス
+ */
+export function removeCookie(name: string, path: string = '/'): void {
+  if (typeof document === 'undefined') {
+    return; // サーバーサイドでは実行しない
+  }
+
+  // 有効期限を過去に設定することでCookieを削除
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`;
+}
+
+/**
  * ユーザーIDをLocalStorageとCookieに保存する関数
  *
  * @param userId - 保存するユーザーID
@@ -190,13 +265,16 @@ export function saveUserId(userId: number): boolean {
 
   try {
     // LocalStorageに保存
-    localStorage.setItem(localStorageKeys.USER_ID, userId.toString());
-    
+    localStorage.setItem(STORAGE_KEYS.USER_ID, userId.toString());
+
     // Cookieにも保存 (サーバーサイドでもアクセスできるように)
-    // 30日間有効、Pathはルート、SameSite=Strict
-    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
-    document.cookie = `${localStorageKeys.USER_ID}=${userId}; expires=${expires}; path=/; SameSite=Strict`;
-    
+    // 30日間有効、Pathはルート
+    setCookie(STORAGE_KEYS.USER_ID, userId.toString(), {
+      days: 30,
+      path: '/',
+      sameSite: 'Lax',
+    });
+
     return true;
   } catch (error) {
     console.error('ユーザーIDの保存に失敗しました:', error);
@@ -205,7 +283,8 @@ export function saveUserId(userId: number): boolean {
 }
 
 /**
- * LocalStorageからユーザーIDを取得する関数
+ * ユーザーIDを取得する関数
+ * CookieとLocalStorageの両方から取得を試み、Cookieを優先する
  *
  * @returns 保存されたユーザーID、存在しない場合または取得に失敗した場合はnull
  */
@@ -215,7 +294,35 @@ export function getUserId(): number | null {
   }
 
   try {
-    const userId = localStorage.getItem(localStorageKeys.USER_ID);
+    // まずCookieから取得を試みる
+    const cookieUserId = getCookieValue(STORAGE_KEYS.USER_ID);
+    let userId: string | null = null;
+    let localStorageUserId: string | null = null;
+
+    if (cookieUserId) {
+      userId = cookieUserId;
+
+      // LocalStorageからも取得して比較
+      localStorageUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+
+      // LocalStorageに値がない、または値が異なる場合は同期
+      if (!localStorageUserId || localStorageUserId !== cookieUserId) {
+        localStorage.setItem(STORAGE_KEYS.USER_ID, cookieUserId);
+      }
+    } else {
+      // Cookieに値がない場合はLocalStorageから取得
+      localStorageUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+      if (localStorageUserId) {
+        // LocalStorageの値をCookieにも同期
+        setCookie(STORAGE_KEYS.USER_ID, localStorageUserId, {
+          days: 30,
+          path: '/',
+          sameSite: 'Lax',
+        });
+        userId = localStorageUserId;
+      }
+    }
+
     if (!userId) return null;
 
     const parsedId = parseInt(userId, 10);
