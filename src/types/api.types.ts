@@ -102,6 +102,15 @@ export type MatchResponse = ApiResponse<Match>;
 export type MatchesResponse = ApiResponse<Match[]>;
 
 /**
+ * マッチング状態確認レスポンス
+ */
+export type MatchStatusResponse = ApiResponse<{
+  isMatched: boolean;
+  matchedWithUserId?: number;
+  matchId?: number;
+}>;
+
+/**
  * メッセージ送信レスポンス
  */
 export type MessageResponse = ApiResponse<Message>;

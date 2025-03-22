@@ -178,7 +178,7 @@ export function hasNoSpecialChars(
 }
 
 /**
- * ユーザーIDをLocalStorageに保存する関数
+ * ユーザーIDをLocalStorageとCookieに保存する関数
  *
  * @param userId - 保存するユーザーID
  * @returns 保存に成功した場合true、失敗した場合false
@@ -189,7 +189,14 @@ export function saveUserId(userId: number): boolean {
   }
 
   try {
+    // LocalStorageに保存
     localStorage.setItem(localStorageKeys.USER_ID, userId.toString());
+    
+    // Cookieにも保存 (サーバーサイドでもアクセスできるように)
+    // 30日間有効、Pathはルート、SameSite=Strict
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = `${localStorageKeys.USER_ID}=${userId}; expires=${expires}; path=/; SameSite=Strict`;
+    
     return true;
   } catch (error) {
     console.error('ユーザーIDの保存に失敗しました:', error);

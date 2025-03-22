@@ -1,8 +1,11 @@
 import {
   CreateMatchRequest,
+  CancelMatchRequest,
   LikeResponse,
   MatchResponse,
-  MatchesResponse
+  MatchesResponse,
+  MatchStatusResponse,
+  ApiResponse
 } from '@/types/api.types';
 import {
   fetchApi,
@@ -120,4 +123,34 @@ export async function cancelMatch(matchId: number): Promise<MatchResponse> {
 
   const cancelData: CancelMatchRequest = { userId };
   return postApi<MatchResponse>(`${API_BASE_URL}/${matchId}/cancel`, cancelData);
+}
+
+/**
+ * マッチング状態確認関数
+ * SWRと組み合わせて使用するためのフェッチャー
+ * @param url - SWRによって生成されたキー
+ * @returns マッチング状態
+ */
+export async function checkMatchStatus(url?: string): Promise<MatchStatusResponse> {
+  const userId = getUserIdFromLocalStorage();
+
+  if (!userId) {
+    return {
+      error: 'ユーザーIDが取得できません',
+      status: 401
+    };
+  }
+
+  // URLが指定されている場合はそのまま使用、ない場合は生成
+  const apiUrl = url || `${API_BASE_URL}/check?userId=${userId}`;
+
+  try {
+    return await fetchApi<MatchStatusResponse>(apiUrl);
+  } catch (error) {
+    console.error('マッチング状態確認エラー:', error);
+    return {
+      error: 'エラーが発生しました',
+      status: 500
+    };
+  }
 }
