@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PageContainer } from "@/components/layout/page-container";
 import { TextField } from "@/components/ui/text-field";
@@ -8,25 +7,19 @@ import { SelectField } from "@/components/ui/select-field";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SimpleMessage } from "@/components/ui/simple-message";
-import { generateEndTimeOptions, getUserId, saveUserId } from "@/lib/utils";
-import { CreateUserRequest, UpdateUserRequest } from "@/types/api.types";
-import { registerUser, fetchUser, updateUser } from "@/api/users";
+import { generateEndTimeOptions } from "@/lib/utils";
+import { useSetupForm } from "@/hooks/useSetupForm";
 
 export default function SetupPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<number | null>(null);
-
-  // フォームの状態
-  const [formData, setFormData] = useState<CreateUserRequest | UpdateUserRequest>({
-    nickname: "",
-    grade: "",
-    department: "",
-    end_time: null,
-    place: null,
-  });
+  const {
+    loading,
+    submitting,
+    error,
+    formData,
+    handleChange,
+    handleSubmit
+  } = useSetupForm();
 
   // 選択肢のデータ
   const gradeOptions = ["1年", "2年", "3年", "4年", "5年", "6年", "その他"];
@@ -41,106 +34,11 @@ export default function SetupPage() {
   ];
   const endTimeOptions = generateEndTimeOptions();
 
-  // 初期データ読み込み
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const id = getUserId();
-        setUserId(id);
-
-        if (id) {
-          // 既存ユーザーの場合、データを取得
-          const response = await fetchUser(id);
-
-          if (response.data) {
-            // 取得したデータでフォームを初期化
-            setFormData({
-              nickname: response.data.nickname,
-              grade: response.data.grade,
-              department: response.data.department,
-              end_time: response.data.end_time,
-              place: response.data.place,
-            });
-          } else if (response.error) {
-            let errorMessage: string;
-
-            if (typeof response.error === 'string') {
-              errorMessage = response.error;
-            } else if (typeof response.error === 'object' && response.error.message) {
-              errorMessage = response.error.message;
-            } else {
-              errorMessage = "ユーザー情報の取得に失敗しました。もう一度お試しください。";
-            }
-
-            setError(errorMessage);
-          }
-        }
-      } catch (err) {
-        console.error("ユーザーデータ取得エラー:", err);
-        setError("ネットワークエラーが発生しました。インターネット接続を確認して再試行してください。");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUserData();
-  }, []);
-
-  // 入力変更ハンドラ
-  const handleChange = (name: string, value: string | null) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // フォーム送信ハンドラ
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      let response;
-
-      if (userId) {
-        // 既存ユーザーの更新
-        response = await updateUser(formData as UpdateUserRequest);
-      } else {
-        // 新規ユーザー登録
-        response = await registerUser(formData as CreateUserRequest);
-
-        // 新規登録の場合、IDをLocalStorageに保存
-        if (response.data && response.data.id) {
-          saveUserId(response.data.id);
-          setUserId(response.data.id);
-        }
-      }
-
-      if (response.error) {
-        let errorMessage: string;
-
-        if (typeof response.error === 'string') {
-          errorMessage = response.error;
-        } else if (typeof response.error === 'object' && response.error.message) {
-          errorMessage = response.error.message;
-        } else {
-          errorMessage = "エラーが発生しました。もう一度お試しください。";
-        }
-
-        setError(errorMessage);
-      } else if (response.data) {
-        // 成功時はユーザー一覧画面へ遷移
-        router.push("/users");
-      } else {
-        setError("予期しないレスポンス形式です。管理者に問い合わせてください。");
-      }
-    } catch (err) {
-      console.error("送信エラー:", err);
-      setError("ネットワークエラーが発生しました。インターネット接続を確認して再試行してください。");
-    } finally {
-      setSubmitting(false);
+  // フォーム送信ハンドララッパー
+  const onSubmit = async (e: React.FormEvent) => {
+    const success = await handleSubmit(e);
+    if (success) {
+      router.push("/users");
     }
   };
 
@@ -154,9 +52,9 @@ export default function SetupPage() {
             <Spinner />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6 relative">
+          <form onSubmit={onSubmit} className="space-y-6 relative">
             {/* プロフィール入力エリア（必須） */}
-            <div className="space-y-4">
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
               <h2 className="text-lg font-semibold">プロフィール情報（必須）</h2>
 
               <TextField
@@ -193,7 +91,7 @@ export default function SetupPage() {
             </div>
 
             {/* ステータス入力エリア（任意） */}
-            <div className="space-y-4">
+            <div className="space-y-4 p-4 bg-white rounded-lg border border-gray-100">
               <h2 className="text-lg font-semibold">募集ステータス（任意）</h2>
 
               <div className="relative z-10">

@@ -19,15 +19,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = params.id;
-    if (!isValidId(userId)) {
+    const { id } = await params;
+    if (!isValidId(id)) {
       return createValidationErrorResponse<User>('無効なユーザーIDです');
     }
 
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', userId)
+      .eq('id', id)
       .single();
 
     if (error) {
@@ -55,8 +55,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = params.id;
-    if (!isValidId(userId)) {
+    const { id } = await params;
+    if (!isValidId(id)) {
       return createValidationErrorResponse<User>('無効なユーザーIDです');
     }
 
@@ -90,7 +90,7 @@ export async function PATCH(
     const { data: user, error } = await supabase
       .from('users')
       .update(updateData)
-      .eq('id', userId)
+      .eq('id', id)
       .select('*')
       .single();
 
