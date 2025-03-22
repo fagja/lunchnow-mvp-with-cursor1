@@ -154,7 +154,7 @@ export default function SetupPage() {
             <Spinner />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 relative">
             {/* プロフィール入力エリア（必須） */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">プロフィール情報（必須）</h2>
@@ -169,46 +169,54 @@ export default function SetupPage() {
                 helperText="1～12文字で入力してください"
               />
 
-              <SelectField
-                label="学年"
-                name="grade"
-                value={formData.grade}
-                onChange={(value) => handleChange("grade", value)}
-                options={gradeOptions.map(option => ({ value: option, label: option }))}
-                required
-              />
+              <div className="relative z-30">
+                <SelectField
+                  label="学年"
+                  name="grade"
+                  value={formData.grade}
+                  onChange={(value) => handleChange("grade", value)}
+                  options={gradeOptions.map(option => ({ value: option, label: option }))}
+                  required
+                />
+              </div>
 
-              <SelectField
-                label="学部"
-                name="department"
-                value={formData.department}
-                onChange={(value) => handleChange("department", value)}
-                options={departmentOptions.map(option => ({ value: option, label: option }))}
-                required
-              />
+              <div className="relative z-20">
+                <SelectField
+                  label="学部"
+                  name="department"
+                  value={formData.department}
+                  onChange={(value) => handleChange("department", value)}
+                  options={departmentOptions.map(option => ({ value: option, label: option }))}
+                  required
+                />
+              </div>
             </div>
 
             {/* ステータス入力エリア（任意） */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">募集ステータス（任意）</h2>
 
-              <SelectField
-                label="空き時間"
-                name="end_time"
-                value={formData.end_time || ""}
-                onChange={(value) => handleChange("end_time", value)}
-                options={endTimeOptions.map(option => ({ value: option, label: option }))}
-                placeholder="選択してください"
-              />
+              <div className="relative z-10">
+                <SelectField
+                  label="空き時間"
+                  name="end_time"
+                  value={formData.end_time || ""}
+                  onChange={(value) => handleChange("end_time", value)}
+                  options={endTimeOptions.map(option => ({ value: option, label: option }))}
+                  placeholder="選択してください"
+                />
+              </div>
 
-              <SelectField
-                label="食べたい場所"
-                name="place"
-                value={formData.place || ""}
-                onChange={(value) => handleChange("place", value)}
-                options={placeOptions.map(option => ({ value: option, label: option }))}
-                placeholder="選択してください"
-              />
+              <div className="relative z-0">
+                <SelectField
+                  label="食べたい場所"
+                  name="place"
+                  value={formData.place || ""}
+                  onChange={(value) => handleChange("place", value)}
+                  options={placeOptions.map(option => ({ value: option, label: option }))}
+                  placeholder="選択してください"
+                />
+              </div>
             </div>
 
             {/* エラーメッセージ */}
