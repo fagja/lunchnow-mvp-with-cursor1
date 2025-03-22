@@ -1,11 +1,19 @@
 import { Like, Match, Message, RecruitingUser, User } from './database.types';
 
 /**
+ * APIエラー型
+ */
+export type ApiError = {
+  code: string;
+  message: string;
+}
+
+/**
  * API共通レスポンス型
  */
 export type ApiResponse<T> = {
   data?: T;
-  error?: string;
+  error?: string | ApiError;
   errorCode?: string;
   status: number;
 };

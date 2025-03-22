@@ -24,13 +24,25 @@ const API_BASE_URL = '/api/users';
  * @returns 登録結果
  */
 export async function registerUser(userData: CreateUserRequest): Promise<UserResponse> {
-  const response = await postApi<UserResponse>(API_BASE_URL, userData);
+  try {
+    const response = await postApi<UserResponse>(API_BASE_URL, userData);
 
-  if (response.data && response.data.id) {
-    saveUserIdToLocalStorage(response.data.id);
+    // APIレスポンスからユーザーIDを取得して保存
+    if (response.data && response.data.id) {
+      saveUserIdToLocalStorage(response.data.id);
+    }
+
+    return response;
+  } catch (error) {
+    console.error("ユーザー登録中にエラーが発生しました:", error);
+    return {
+      error: {
+        code: 'api_error',
+        message: 'ユーザー登録処理中にエラーが発生しました。ネットワーク接続を確認してください。'
+      },
+      status: 500
+    };
   }
-
-  return response;
 }
 
 /**
@@ -39,17 +51,28 @@ export async function registerUser(userData: CreateUserRequest): Promise<UserRes
  * @returns ユーザー情報
  */
 export async function fetchUser(userId?: number): Promise<UserResponse> {
-  if (!userId) {
-    const currentUserId = getUserIdFromLocalStorage();
+  try {
+    if (!userId) {
+      const currentUserId = getUserIdFromLocalStorage();
 
-    if (!currentUserId) {
-      return createUserIdError<UserResponse>();
+      if (!currentUserId) {
+        return createUserIdError<UserResponse>();
+      }
+
+      userId = currentUserId;
     }
 
-    userId = currentUserId;
+    return await fetchApi<UserResponse>(`${API_BASE_URL}/${userId}`);
+  } catch (error) {
+    console.error("ユーザー情報取得中にエラーが発生しました:", error);
+    return {
+      error: {
+        code: 'api_error',
+        message: 'ユーザー情報の取得中にエラーが発生しました。ネットワーク接続を確認してください。'
+      },
+      status: 500
+    };
   }
-
-  return fetchApi<UserResponse>(`${API_BASE_URL}/${userId}`);
 }
 
 /**
@@ -62,18 +85,29 @@ export async function fetchUsers(
   page: number = 1,
   limit: number = 10
 ): Promise<UsersResponse> {
-  const userId = getUserIdFromLocalStorage();
+  try {
+    const userId = getUserIdFromLocalStorage();
 
-  if (!userId) {
-    return createUserIdError<UsersResponse>();
+    if (!userId) {
+      return createUserIdError<UsersResponse>();
+    }
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+
+    return await fetchApi<UsersResponse>(`${API_BASE_URL}?${queryParams.toString()}`);
+  } catch (error) {
+    console.error("ユーザー一覧取得中にエラーが発生しました:", error);
+    return {
+      error: {
+        code: 'api_error',
+        message: 'ユーザー一覧の取得中にエラーが発生しました。ネットワーク接続を確認してください。'
+      },
+      status: 500
+    };
   }
-
-  const queryParams = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString()
-  });
-
-  return fetchApi<UsersResponse>(`${API_BASE_URL}?${queryParams.toString()}`);
 }
 
 /**
@@ -82,13 +116,24 @@ export async function fetchUsers(
  * @returns 更新結果
  */
 export async function updateUser(userData: UpdateUserRequest): Promise<UserResponse> {
-  const userId = getUserIdFromLocalStorage();
+  try {
+    const userId = getUserIdFromLocalStorage();
 
-  if (!userId) {
-    return createUserIdError<UserResponse>();
+    if (!userId) {
+      return createUserIdError<UserResponse>();
+    }
+
+    return await patchApi<UserResponse>(`${API_BASE_URL}/${userId}`, userData);
+  } catch (error) {
+    console.error("ユーザー情報更新中にエラーが発生しました:", error);
+    return {
+      error: {
+        code: 'api_error',
+        message: 'ユーザー情報の更新中にエラーが発生しました。ネットワーク接続を確認してください。'
+      },
+      status: 500
+    };
   }
-
-  return patchApi<UserResponse>(`${API_BASE_URL}/${userId}`, userData);
 }
 
 /**
@@ -96,16 +141,30 @@ export async function updateUser(userData: UpdateUserRequest): Promise<UserRespo
  * ローカルストレージのIDを使用して自動的にユーザー情報を取得
  */
 export async function fetchCurrentUser(): Promise<UserResponse> {
-  const userId = getUserIdFromLocalStorage();
+  try {
+    const userId = getUserIdFromLocalStorage();
 
-  if (!userId) {
+    if (!userId) {
+      return {
+        error: {
+          code: 'not_found',
+          message: 'ユーザーIDが見つかりません'
+        },
+        status: 404
+      };
+    }
+
+    return await fetchUser(userId);
+  } catch (error) {
+    console.error("現在のユーザー情報取得中にエラーが発生しました:", error);
     return {
-      error: 'エラーが発生しました',
-      status: 404
+      error: {
+        code: 'api_error',
+        message: 'ユーザー情報の取得中にエラーが発生しました。ネットワーク接続を確認してください。'
+      },
+      status: 500
     };
   }
-
-  return fetchUser(userId);
 }
 
 // LocalStorage関連の関数をエクスポート
