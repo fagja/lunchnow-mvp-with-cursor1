@@ -84,7 +84,7 @@ export function generateEndTimeOptions(): string[] {
   // 開始時刻を30分単位に切り上げる
   const startTime = roundToNextHalfHour(now);
 
-  // 最大6時間後まで30分ごとに選択肢を生成
+  // 最大6時間後まで30分ごとに選択肢を生成（6時間=12個の30分間隔）
   for (let i = 0; i < 12; i++) {
     const currentTime = new Date(startTime);
     currentTime.setMinutes(currentTime.getMinutes() + (i * 30));
@@ -101,6 +101,7 @@ export function generateEndTimeOptions(): string[] {
  * @returns 整形された日付文字列 (例: 2023年4月1日 12:30)
  */
 export function formatDateTime(dateString: string): string {
+  // タイムゾーンを明示的に指定して日本時間で表示
   const date = new Date(dateString);
   return date.toLocaleString('ja-JP', {
     year: 'numeric',
@@ -108,6 +109,7 @@ export function formatDateTime(dateString: string): string {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Tokyo' // 明示的に日本時間を指定
   });
 }
 
@@ -117,10 +119,17 @@ export function formatDateTime(dateString: string): string {
  * @returns 「最終更新: HH:MM」形式の文字列
  */
 export function getLastUpdateText(): string {
+  // 現在時刻を日本時間で取得
   const now = new Date();
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  return `最終更新: ${hours}:${minutes}`;
+  // 日本時間でフォーマット
+  const formatter = new Intl.DateTimeFormat('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Tokyo'
+  });
+  const timeString = formatter.format(now);
+  return `最終更新: ${timeString}`;
 }
 
 /**
@@ -175,16 +184,17 @@ export function hasNoSpecialChars(
  * @returns 保存に成功した場合true、失敗した場合false
  */
 export function saveUserId(userId: number): boolean {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(localStorageKeys.USER_ID, userId.toString());
-      return true;
-    } catch (error) {
-      console.error('ユーザーIDの保存に失敗しました:', error);
-      return false;
-    }
+  if (typeof window === 'undefined') {
+    return false; // サーバーサイドでは実行しない
   }
-  return false;
+
+  try {
+    localStorage.setItem(localStorageKeys.USER_ID, userId.toString());
+    return true;
+  } catch (error) {
+    console.error('ユーザーIDの保存に失敗しました:', error);
+    return false;
+  }
 }
 
 /**
@@ -193,16 +203,21 @@ export function saveUserId(userId: number): boolean {
  * @returns 保存されたユーザーID、存在しない場合または取得に失敗した場合はnull
  */
 export function getUserId(): number | null {
-  if (typeof window !== 'undefined') {
-    try {
-      const userId = localStorage.getItem(localStorageKeys.USER_ID);
-      return userId ? parseInt(userId, 10) : null;
-    } catch (error) {
-      console.error('ユーザーIDの取得に失敗しました:', error);
-      return null;
-    }
+  if (typeof window === 'undefined') {
+    return null; // サーバーサイドでは実行しない
   }
-  return null;
+
+  try {
+    const userId = localStorage.getItem(localStorageKeys.USER_ID);
+    if (!userId) return null;
+
+    const parsedId = parseInt(userId, 10);
+    // NaNチェックを追加
+    return isNaN(parsedId) ? null : parsedId;
+  } catch (error) {
+    console.error('ユーザーIDの取得に失敗しました:', error);
+    return null;
+  }
 }
 
 /**
@@ -213,16 +228,22 @@ export function getUserId(): number | null {
  * @returns 保存に成功した場合true、失敗した場合false
  */
 export function saveSettings<T>(key: string, value: T): boolean {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch (error) {
-      console.error(`設定[${key}]の保存に失敗しました:`, error);
-      return false;
-    }
+  if (typeof window === 'undefined') {
+    return false; // サーバーサイドでは実行しない
   }
-  return false;
+
+  if (!key || key.trim() === '') {
+    console.error('無効なキーが指定されました');
+    return false;
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error(`設定[${key}]の保存に失敗しました:`, error);
+    return false;
+  }
 }
 
 /**
@@ -233,14 +254,22 @@ export function saveSettings<T>(key: string, value: T): boolean {
  * @returns 保存された設定値、存在しない場合または取得に失敗した場合はデフォルト値
  */
 export function getSettings<T>(key: string, defaultValue: T): T {
-  if (typeof window !== 'undefined') {
-    try {
-      const value = localStorage.getItem(key);
-      return value ? JSON.parse(value) : defaultValue;
-    } catch (error) {
-      console.error(`設定[${key}]の取得に失敗しました:`, error);
-      return defaultValue;
-    }
+  if (typeof window === 'undefined') {
+    return defaultValue; // サーバーサイドでは実行しない
   }
-  return defaultValue;
+
+  if (!key || key.trim() === '') {
+    console.error('無効なキーが指定されました');
+    return defaultValue;
+  }
+
+  try {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+
+    return JSON.parse(value) as T;
+  } catch (error) {
+    console.error(`設定[${key}]の取得に失敗しました:`, error);
+    return defaultValue;
+  }
 }

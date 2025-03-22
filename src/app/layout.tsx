@@ -1,7 +1,8 @@
+import "@/app/globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
-import { PageContainer } from "@/components/layout/page-container";
+import { PageContainer } from "@/components/ui/page-container";
+import { Providers } from "./_providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,9 +22,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`${inter.className} antialiased`}>
-        <PageContainer>
-          {children}
-        </PageContainer>
+        <Providers>
+          <PageContainer>{children}</PageContainer>
+        </Providers>
       </body>
     </html>
   );
