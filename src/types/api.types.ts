@@ -1,11 +1,19 @@
 import { Like, Match, Message, RecruitingUser, User } from './database.types';
 
 /**
+ * APIエラー型
+ */
+export type ApiError = {
+  code: string;
+  message: string;
+}
+
+/**
  * API共通レスポンス型
  */
 export type ApiResponse<T> = {
   data?: T;
-  error?: string;
+  error?: string | ApiError;
   errorCode?: string;
   status: number;
 };
@@ -92,6 +100,15 @@ export type MatchResponse = ApiResponse<Match>;
  * マッチ一覧取得レスポンス
  */
 export type MatchesResponse = ApiResponse<Match[]>;
+
+/**
+ * マッチング状態確認レスポンス
+ */
+export type MatchStatusResponse = ApiResponse<{
+  isMatched: boolean;
+  matchedWithUserId?: number;
+  matchId?: number;
+}>;
 
 /**
  * メッセージ送信レスポンス

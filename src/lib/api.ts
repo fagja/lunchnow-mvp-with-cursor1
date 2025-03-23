@@ -1,152 +1,224 @@
-import useSWR, { SWRConfiguration, SWRResponse } from 'swr';
-import { fetchApi, postApi, patchApi, deleteApi, getUserIdFromLocalStorage } from '@/api/api-client';
+'use client';
+
+import { SWRResponse, SWRConfiguration } from 'swr';
+import useSWRBase from 'swr';
+import { getClientUserId } from './utils';
+import { ERROR_CODES, ERROR_MESSAGES } from './constants';
 import { ApiResponse } from '@/types/api.types';
-import { getUserId } from '@/lib/utils';
 
 /**
- * SWRフェッチャー関数の型定義
+ * APIのデフォルトベースURL
  */
-type Fetcher<T> = (url: string) => Promise<T>;
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_VERCEL_URL
+  ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api`
+  : 'http://localhost:3000/api';
 
 /**
- * APIリクエストの基本オプション
+ * SWR用のフェッチャー関数
  */
-type ApiRequestOptions = {
-  headers?: Record<string, string>;
-  timeout?: number;
+const fetcher = async (url: string) => {
+  const res = await fetch(url.startsWith('/') ? `/api${url}` : url);
+
+  if (!res.ok) {
+    const error = new Error('APIリクエストに失敗しました');
+    const errorData = await res.json();
+    (error as any).info = errorData;
+    (error as any).status = res.status;
+    throw error;
+  }
+
+  return res.json();
 };
 
 /**
- * 標準SWR設定と拡張
+ * 認証チェック付きSWRカスタムフック
  */
-const defaultSWRConfig: SWRConfiguration = {
-  revalidateOnFocus: false,
-  revalidateIfStale: false,
-  revalidateOnReconnect: true,
-  errorRetryCount: 3,
-  dedupingInterval: 5000, // 5秒間の重複リクエスト防止
-};
+export function useSWRWithAuth<T = any>(
+  key: string | null,
+  config?: SWRConfiguration
+): SWRResponse<T> {
+  // キーがnullの場合（ユーザーIDが取得できない場合など）はリクエストしない
+  return useSWRBase<T>(key, fetcher, {
+    onErrorRetry: (error: any, key: any, config: any, revalidate: any, { retryCount }: { retryCount: any }) => {
+      // 認証エラー（401）の場合はリトライしない
+      if (error.status === 401) return;
+
+      // 5回以上のリトライは行わない
+      if (retryCount >= 5) return;
+
+      // 指数バックオフで再試行
+      setTimeout(() => revalidate({ retryCount }), 5000 * (2 ** retryCount));
+    },
+    ...config,
+  });
+}
 
 /**
- * SWRを使用してAPIからデータを取得するカスタムフック
- *
- * @param url - APIのURL
- * @param options - APIリクエストオプション
- * @param config - SWR設定
- * @returns SWRレスポンス
+ * 標準SWRカスタムフック
  */
-export function useApiGet<T>(
-  url: string | null,
-  options: ApiRequestOptions = {},
-  config: SWRConfiguration = {}
-): SWRResponse<T | null, Error> {
-  // カスタムフェッチャーの定義
-  const fetcher: Fetcher<T | null> = async (url: string) => {
-    const response = await fetchApi<T>(url, {
-      headers: options.headers,
-      timeout: options.timeout,
+export function useSWR<T = any>(
+  key: string | null,
+  config?: SWRConfiguration
+): SWRResponse<T> {
+  return useSWRWithAuth<T>(key, config);
+}
+
+/**
+ * ユーザーIDがない場合のエラーレスポンスを作成
+ */
+export function createNoUserIdError<T>(): ApiResponse<T> {
+  return {
+    error: {
+      code: ERROR_CODES.AUTH_ERROR,
+      message: ERROR_MESSAGES[ERROR_CODES.AUTH_ERROR]
+    },
+    status: 401,
+    data: undefined
+  };
+}
+
+/**
+ * GET APIリクエスト関数
+ */
+export async function fetchApi<T = any>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
+  const userId = getClientUserId();
+
+  // ユーザーIDが必要なAPIの場合はチェック
+  if (url.includes('/api/users') || url.includes('/api/matches') || url.includes('/api/likes')) {
+    if (!userId) {
+      return createNoUserIdError<T>();
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      ...options,
     });
 
-    if (response.error) {
-      throw new Error(response.error.message);
-    }
-
-    return response.data || null;
-  };
-
-  // 複合設定
-  const mergedConfig: SWRConfiguration = {
-    ...defaultSWRConfig,
-    ...config,
-  };
-
-  // SWRフックの使用
-  return useSWR<T | null, Error>(
-    url,
-    fetcher,
-    mergedConfig
-  );
-}
-
-/**
- * APIを使用してPOSTリクエストを送信する共通関数
- *
- * @param url - APIのURL
- * @param body - POSTリクエストボディ
- * @param options - APIリクエストオプション
- * @returns APIレスポンス
- */
-export async function apiPost<T, B = any>(
-  url: string,
-  body: B,
-  options: ApiRequestOptions = {}
-): Promise<ApiResponse<T>> {
-  return await postApi<T>(url, body, {
-    headers: options.headers,
-    timeout: options.timeout,
-  });
-}
-
-/**
- * APIを使用してPATCHリクエストを送信する共通関数
- *
- * @param url - APIのURL
- * @param body - PATCHリクエストボディ
- * @param options - APIリクエストオプション
- * @returns APIレスポンス
- */
-export async function apiPatch<T, B = any>(
-  url: string,
-  body: B,
-  options: ApiRequestOptions = {}
-): Promise<ApiResponse<T>> {
-  return await patchApi<T>(url, body, {
-    headers: options.headers,
-    timeout: options.timeout,
-  });
-}
-
-/**
- * APIを使用してDELETEリクエストを送信する共通関数
- *
- * @param url - APIのURL
- * @param options - APIリクエストオプション
- * @returns APIレスポンス
- */
-export async function apiDelete<T>(
-  url: string,
-  options: ApiRequestOptions = {}
-): Promise<ApiResponse<T>> {
-  return await deleteApi<T>(url, {
-    headers: options.headers,
-    timeout: options.timeout,
-  });
-}
-
-/**
- * ユーザーIDが必要なAPIリクエストを送信する前に、ユーザーIDの存在を確認する関数
- *
- * @returns ユーザーID、存在しない場合はnull
- */
-export function checkUserIdBeforeRequest(): number | null {
-  const userId = getUserId();
-  if (!userId) {
-    console.error('ユーザーIDが存在しません。');
-    return null;
+    return await response.json();
+  } catch (error) {
+    console.error('API fetch error:', error);
+    return {
+      error: {
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
+      },
+      status: 500,
+      data: undefined
+    };
   }
-  return userId;
 }
 
 /**
- * URLクエリパラメータを構築する関数
- *
- * @param params - クエリパラメータオブジェクト
- * @returns クエリ文字列（?key1=value1&key2=value2形式）
+ * POST APIリクエスト関数
  */
-export function buildQueryParams(params: Record<string, string | number | boolean | undefined | null>): string {
-  const validParams = Object.entries(params)
-    .filter(([_, value]) => value !== undefined && value !== null)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+export async function postApi<T = any>(url: string, data: any, options?: RequestInit): Promise<ApiResponse<T>> {
+  const userId = getClientUserId();
 
-  return validParams.length > 0 ? `?${validParams.join('&')}` : '';
+  // ユーザーIDが必要なAPIの場合はチェック
+  if (url.includes('/api/users') || url.includes('/api/matches') || url.includes('/api/likes')) {
+    if (!userId) {
+      return createNoUserIdError<T>();
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      ...options,
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error('API post error:', error);
+    return {
+      error: {
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
+      },
+      status: 500,
+      data: undefined
+    };
+  }
+}
+
+/**
+ * PATCH APIリクエスト関数
+ */
+export async function patchApi<T = any>(url: string, data: any, options?: RequestInit): Promise<ApiResponse<T>> {
+  const userId = getClientUserId();
+
+  // ユーザーIDが必要なAPIの場合はチェック
+  if (url.includes('/api/users') || url.includes('/api/matches') || url.includes('/api/likes')) {
+    if (!userId) {
+      return createNoUserIdError<T>();
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      ...options,
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error('API patch error:', error);
+    return {
+      error: {
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
+      },
+      status: 500,
+      data: undefined
+    };
+  }
+}
+
+/**
+ * DELETE APIリクエスト関数
+ */
+export async function deleteApi<T = any>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
+  const userId = getClientUserId();
+
+  // ユーザーIDが必要なAPIの場合はチェック
+  if (url.includes('/api/users') || url.includes('/api/matches') || url.includes('/api/likes')) {
+    if (!userId) {
+      return createNoUserIdError<T>();
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      ...options,
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error('API delete error:', error);
+    return {
+      error: {
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
+      },
+      status: 500,
+      data: undefined
+    };
+  }
 }

@@ -2,8 +2,9 @@
  * API呼び出し共通関数
  */
 
-import { ApiResponse } from '@/types/api.types';
+import { ApiResponse, ApiError } from '@/types/api.types';
 import { getUserId, saveUserId, localStorageKeys } from '@/lib/utils';
+import { STORAGE_KEYS, USER_ID_ERROR_MESSAGE, ERROR_CODES, ERROR_MESSAGES } from "@/lib/constants";
 
 // 拡張フェッチオプション型定義
 type ExtendedFetchOptions = RequestInit & {
@@ -11,20 +12,11 @@ type ExtendedFetchOptions = RequestInit & {
 };
 
 /**
- * LocalStorageからユーザーIDを取得
- * @returns ユーザーID（存在しない場合はnull）
+ * 外部APIのベースURL
  */
-export function getUserIdFromLocalStorage(): number | null {
-  return getUserId();
-}
-
-/**
- * LocalStorageにユーザーIDを保存
- * @param userId ユーザーID
- */
-export function saveUserIdToLocalStorage(userId: number): void {
-  saveUserId(userId);
-}
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
+  ? process.env.NEXT_PUBLIC_API_BASE_URL
+  : 'http://localhost:3000/api';
 
 /**
  * ユーザーIDが存在しない場合のエラーレスポンスを生成
@@ -32,12 +24,55 @@ export function saveUserIdToLocalStorage(userId: number): void {
  */
 export function createUserIdError<T>(): ApiResponse<T> {
   return {
+    data: null,
     error: {
-      code: 'unauthorized_error',
-      message: 'ユーザーIDが取得できません。再度ログインしてください。'
+      code: ERROR_CODES.USER_ID_NOT_FOUND,
+      message: USER_ID_ERROR_MESSAGE
     },
     status: 401
   };
+}
+
+/**
+ * ステータスコードからエラーコードを取得
+ * @param status HTTPステータスコード
+ */
+export function getErrorCodeFromStatus(status: number): string {
+  switch (true) {
+    case status === 400:
+      return ERROR_CODES.USER_INPUT_ERROR;
+    case status === 401:
+      return ERROR_CODES.AUTH_ERROR;
+    case status === 403:
+      return ERROR_CODES.AUTH_ERROR;
+    case status === 404:
+      return ERROR_CODES.NOT_FOUND;
+    case status >= 500:
+      return ERROR_CODES.SERVER_ERROR;
+    default:
+      return ERROR_CODES.SYSTEM_ERROR;
+  }
+}
+
+/**
+ * ステータスコードからエラーメッセージを取得
+ * @param status HTTPステータスコード
+ */
+export function getErrorMessageFromStatus(status: number): string {
+  switch (true) {
+    case status === 400:
+      return ERROR_MESSAGES[ERROR_CODES.USER_INPUT_ERROR];
+    case status === 401:
+      return ERROR_MESSAGES[ERROR_CODES.AUTH_ERROR];
+    case status === 403:
+      return ERROR_MESSAGES[ERROR_CODES.AUTH_ERROR];
+    case status === 404:
+      return ERROR_MESSAGES[ERROR_CODES.NOT_FOUND];
+    case status >= 500:
+      return ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR];
+    default:
+      return ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR];
+  }
 }
 
 /**
@@ -69,13 +104,14 @@ export async function fetchApi<T>(url: string, options: ExtendedFetchOptions = {
 
     // HTTPエラーの処理
     if (!response.ok) {
-      return {
+      const errorResponse: ApiResponse<T> = {
         error: {
           code: getErrorCodeFromStatus(response.status),
           message: getErrorMessageFromStatus(response.status)
         },
         status: response.status,
       };
+      return errorResponse;
     }
 
     const data = await response.json();
@@ -87,11 +123,15 @@ export async function fetchApi<T>(url: string, options: ExtendedFetchOptions = {
     console.error(`API呼び出しエラー (GET ${url}):`, error);
 
     // エラーハンドリング
+    const errorObj: ApiError = {
+      code: error.name === 'AbortError' ? ERROR_CODES.TIMEOUT_ERROR : ERROR_CODES.NETWORK_ERROR,
+      message: error.name === 'AbortError'
+        ? ERROR_MESSAGES[ERROR_CODES.TIMEOUT_ERROR]
+        : ERROR_MESSAGES[ERROR_CODES.NETWORK_ERROR]
+    };
+
     return {
-      error: {
-        code: error.name === 'AbortError' ? 'timeout_error' : 'network_error',
-        message: error.name === 'AbortError' ? 'リクエストがタイムアウトしました' : 'ネットワークエラーが発生しました'
-      },
+      error: errorObj,
       status: 500,
     };
   }
@@ -163,13 +203,14 @@ async function sendRequestWithBody<T>(
 
     // HTTPエラーの処理
     if (!response.ok) {
-      return {
+      const errorResponse: ApiResponse<T> = {
         error: {
           code: getErrorCodeFromStatus(response.status),
           message: getErrorMessageFromStatus(response.status)
         },
         status: response.status,
       };
+      return errorResponse;
     }
 
     const data = await response.json();
@@ -181,52 +222,66 @@ async function sendRequestWithBody<T>(
     console.error(`API呼び出しエラー (${method} ${url}):`, error);
 
     // エラーハンドリング
+    const errorObj: ApiError = {
+      code: error.name === 'AbortError' ? ERROR_CODES.TIMEOUT_ERROR : ERROR_CODES.NETWORK_ERROR,
+      message: error.name === 'AbortError'
+        ? ERROR_MESSAGES[ERROR_CODES.TIMEOUT_ERROR]
+        : ERROR_MESSAGES[ERROR_CODES.NETWORK_ERROR]
+    };
+
     return {
-      error: {
-        code: error.name === 'AbortError' ? 'timeout_error' : 'network_error',
-        message: error.name === 'AbortError' ? 'リクエストがタイムアウトしました' : 'ネットワークエラーが発生しました'
-      },
+      error: errorObj,
       status: 500,
     };
   }
 }
 
 /**
- * HTTPステータスコードからエラーコードを取得
+ * ユーザー認証用メソッド
+ * @param idToken Firebase認証トークン
+ * @returns APIレスポンス
  */
-function getErrorCodeFromStatus(status: number): string {
-  switch (status) {
-    case 400:
-      return 'validation_error';
-    case 401:
-      return 'unauthorized_error';
-    case 403:
-      return 'forbidden_error';
-    case 404:
-      return 'not_found';
-    case 409:
-      return 'conflict_error';
-    default:
-      return 'general_error';
+export async function authenticateUser(idToken: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ idToken }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.data?.userId) {
+      // ユーザーIDをLocalStorageに保存
+      saveUserId(data.data.userId);
+      return { success: true, userId: data.data.userId };
+    } else {
+      console.error('Authentication error:', data.error);
+      return { success: false, error: data.error || '認証に失敗しました' };
+    }
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return { success: false, error: '認証処理中にエラーが発生しました' };
   }
 }
 
 /**
- * HTTPステータスコードからエラーメッセージを取得
+ * ユーザーログアウト用メソッド
+ * @returns APIレスポンス
  */
-function getErrorMessageFromStatus(status: number): string {
-  switch (status) {
-    case 400:
-      return '入力内容に誤りがあります';
-    case 401:
-      return '認証に失敗しました';
-    case 403:
-      return 'アクセス権限がありません';
-    case 404:
-      return 'リソースが見つかりません';
-    case 409:
-      return 'リソースが競合しています';
-    default:
-      return 'エラーが発生しました';
+export async function logoutUser() {
+  try {
+    // LocalStorageからユーザーIDを削除
+    localStorage.removeItem(STORAGE_KEYS.USER_ID);
+
+    // Cookieからも削除（サーバーサイドで削除処理が必要）
+    document.cookie = `${STORAGE_KEYS.USER_ID}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Logout error:', error);
+    return { success: false, error: 'ログアウト処理中にエラーが発生しました' };
   }
 }

@@ -7,10 +7,11 @@ export interface TextFieldProps
   label?: string;
   error?: string;
   helperText?: string;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
 }
 
 const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
-  ({ className, label, error, helperText, ...props }, ref) => {
+  ({ className, label, error, helperText, onBlur, ...props }, ref) => {
     return (
       <div className="w-full space-y-2">
         {label && (
@@ -31,6 +32,7 @@ const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
           aria-describedby={
             error ? `${props.id}-error` : helperText ? `${props.id}-helper` : undefined
           }
+          onBlur={onBlur}
           {...props}
         />
         {error && (

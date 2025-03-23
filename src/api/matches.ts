@@ -1,123 +1,133 @@
-import {
-  CreateMatchRequest,
-  LikeResponse,
-  MatchResponse,
-  MatchesResponse
-} from '@/types/api.types';
-import {
-  fetchApi,
-  postApi,
-  getUserIdFromLocalStorage,
-  createUserIdError
-} from './api-client';
+import { SWRResponse } from 'swr';
+import { API_BASE_URL, createNoUserIdError, useSWR } from '@/lib/api';
+import { getClientUserId } from '@/lib/utils';
+import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
+import { ApiResponse } from '@/types/api.types';
+import { matchingConfig } from '@/lib/swr-config';
 
 /**
- * APIのベースURL
+ * マッチを作成するAPI
+ * @param userId1 ユーザー1のID
+ * @param userId2 ユーザー2のID
+ * @returns APIレスポンス
  */
-const API_BASE_URL = '/api/matches';
-
-/**
- * ユーザーIDが存在しない場合のエラーレスポンスを生成
- */
-const createUserIdError = (): MatchResponse => ({
-  error: 'ユーザーIDが取得できません。再度ログインしてください。',
-  status: 401
-});
-
-/**
- * マッチング作成関数（いいね送信）
- * @param toUserId いいねを送る相手のユーザーID
- * @returns いいね結果
- */
-export async function createMatch(toUserId: number): Promise<LikeResponse> {
-  const fromUserId = getUserIdFromLocalStorage();
-
-  if (!fromUserId) {
-    return createUserIdError<LikeResponse>();
+export async function createMatch(userId1: number, userId2: number): Promise<ApiResponse<any>> {
+  const currentUserId = getClientUserId();
+  if (!currentUserId) {
+    return createNoUserIdError();
   }
 
-  const matchData: CreateMatchRequest = {
-    from_user_id: fromUserId,
-    to_user_id: toUserId
-  };
+  try {
+    const response = await fetch(`${API_BASE_URL}/matches`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId1,
+        userId2,
+      }),
+    });
 
-  return postApi<LikeResponse>('/api/matches', matchData);
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating match:', error);
+    return {
+      error: {
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
+      },
+      status: 500,
+      data: undefined
+    };
+  }
 }
 
 /**
- * マッチング一覧取得関数
- * @param page ページ番号（1始まり、デフォルト1）
- * @param limit 1ページあたりの件数（デフォルト10、最大50）
- * @returns マッチング一覧
+ * ユーザーのマッチ一覧を取得するSWRキーを生成
  */
-export async function fetchMatches(
-  page: number = 1,
-  limit: number = 10
-): Promise<MatchesResponse> {
-  const userId = getUserIdFromLocalStorage();
+export function getMatchesKey(page = 1, limit = 10) {
+  const userId = getClientUserId();
+  if (!userId) return null;
+  return `/matches?page=${page}&limit=${limit}`;
+}
 
-  if (!userId) {
-    return createUserIdError<MatchesResponse>();
-  }
-
-  const queryParams = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString()
+/**
+ * ユーザーのマッチ一覧を取得するカスタムフック
+ */
+export function useMatches(page = 1, limit = 10): SWRResponse {
+  return useSWR(getMatchesKey(page, limit), {
+    ...matchingConfig,
   });
-
-  return fetchApi<MatchesResponse>(`/api/matches?${queryParams.toString()}`);
 }
 
 /**
- * マッチング詳細取得関数
- * @param matchId マッチングID
- * @returns マッチング詳細
+ * 特定のマッチの詳細を取得するSWRキーを生成
  */
-export async function fetchMatch(matchId: number): Promise<MatchResponse> {
-  const userId = getUserIdFromLocalStorage();
+export function getMatchDetailKey(matchId: number) {
+  const userId = getClientUserId();
+  if (!userId) return null;
+  return `/matches/${matchId}`;
+}
 
+/**
+ * 特定のマッチの詳細を取得するカスタムフック
+ */
+export function useMatchDetail(matchId: number): SWRResponse {
+  return useSWR(getMatchDetailKey(matchId), {
+    ...matchingConfig,
+  });
+}
+
+/**
+ * ユーザー間のマッチ状態を確認するSWRキーを生成
+ */
+export function getMatchStatusKey(otherUserId: number) {
+  const userId = getClientUserId();
+  if (!userId) return null;
+  return `/matches/status/${otherUserId}`;
+}
+
+/**
+ * ユーザー間のマッチ状態を確認するカスタムフック
+ */
+export function useMatchStatus(otherUserId: number): SWRResponse {
+  return useSWR(getMatchStatusKey(otherUserId), {
+    ...matchingConfig,
+  });
+}
+
+/**
+ * マッチを更新するAPI（ステータス変更など）
+ */
+export async function updateMatch(matchId: number, updateData: { status?: string }): Promise<ApiResponse<any>> {
+  const userId = getClientUserId();
   if (!userId) {
-    return createUserIdError<MatchResponse>();
+    return createNoUserIdError();
   }
 
-  return fetchApi<MatchResponse>(`/api/matches/${matchId}`);
-}
+  try {
+    const response = await fetch(`${API_BASE_URL}/matches/${matchId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...updateData,
+        userId // 認証用
+      }),
+    });
 
-/**
- * マッチング取得関数
- * @param userId ユーザーID
- * @returns マッチング情報
- */
-export async function getMatchByUserId(userId: number): Promise<MatchResponse> {
-  return fetchApi<MatchResponse>(`${API_BASE_URL}?userId=${userId}`);
-}
-
-/**
- * 自分のマッチング取得関数
- * @returns マッチング情報
- */
-export async function getMyMatch(): Promise<MatchResponse> {
-  const userId = getUserIdFromLocalStorage();
-
-  if (!userId) {
-    return createUserIdError();
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating match:', error);
+    return {
+      error: {
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
+      },
+      status: 500,
+      data: undefined
+    };
   }
-
-  return getMatchByUserId(userId);
-}
-
-/**
- * マッチングキャンセル関数
- * @param matchId マッチングID
- * @returns キャンセル処理結果
- */
-export async function cancelMatch(matchId: number): Promise<MatchResponse> {
-  const userId = getUserIdFromLocalStorage();
-
-  if (!userId) {
-    return createUserIdError();
-  }
-
-  const cancelData: CancelMatchRequest = { userId };
-  return postApi<MatchResponse>(`${API_BASE_URL}/${matchId}/cancel`, cancelData);
 }
