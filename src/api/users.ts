@@ -8,10 +8,9 @@ import {
   fetchApi,
   postApi,
   patchApi,
-  getUserIdFromLocalStorage,
-  saveUserIdToLocalStorage,
   createUserIdError
 } from './api-client';
+import { getUserId, saveUserId, validateUserId } from '@/lib/storage-utils';
 
 /**
  * APIのベースURL
@@ -27,7 +26,7 @@ export async function registerUser(userData: UpdateUserRequest): Promise<UserRes
   const response = await postApi<UserResponse>(API_BASE_URL, userData);
 
   if (response.data && response.data.id) {
-    saveUserIdToLocalStorage(response.data.id);
+    saveUserId(response.data.id);
   }
 
   return response;
@@ -40,7 +39,7 @@ export async function registerUser(userData: UpdateUserRequest): Promise<UserRes
  */
 export async function fetchUser(userId?: number): Promise<UserResponse> {
   if (!userId) {
-    const currentUserId = getUserIdFromLocalStorage();
+    const currentUserId = getUserId();
 
     if (!currentUserId) {
       return createUserIdError<UserResponse>();
@@ -62,7 +61,7 @@ export async function fetchUsers(
   page: number = 1,
   limit: number = 10
 ): Promise<UsersResponse> {
-  const userId = getUserIdFromLocalStorage();
+  const userId = getUserId();
 
   if (!userId) {
     return createUserIdError<UsersResponse>();
@@ -82,7 +81,7 @@ export async function fetchUsers(
  * @returns 更新結果
  */
 export async function updateUser(userData: UpdateUserRequest): Promise<UserResponse> {
-  const userId = getUserIdFromLocalStorage();
+  const userId = getUserId();
 
   if (!userId) {
     return createUserIdError<UserResponse>();
@@ -96,7 +95,7 @@ export async function updateUser(userData: UpdateUserRequest): Promise<UserRespo
  * ローカルストレージのIDを使用して自動的にユーザー情報を取得
  */
 export async function fetchCurrentUser(): Promise<UserResponse> {
-  const userId = getUserIdFromLocalStorage();
+  const userId = getUserId();
 
   if (!userId) {
     return {
@@ -109,4 +108,4 @@ export async function fetchCurrentUser(): Promise<UserResponse> {
 }
 
 // LocalStorage関連の関数をエクスポート
-export { getUserIdFromLocalStorage, saveUserIdToLocalStorage };
+export { getUserId, saveUserId, validateUserId };

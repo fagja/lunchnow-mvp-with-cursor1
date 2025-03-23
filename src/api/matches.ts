@@ -1,5 +1,6 @@
 import { MatchResponse, MatchesResponse, MatchedUserResponse } from '@/types/api.types';
-import { fetchApi, patchApi, getUserIdFromLocalStorage } from './api-client';
+import { fetchApi, patchApi } from './api-client';
+import { getUserId, validateUserId } from '@/lib/storage-utils';
 
 /**
  * APIのベースURL
@@ -19,7 +20,7 @@ const createUserIdError = (): MatchResponse => ({
  * @returns マッチング情報
  */
 export async function fetchCurrentMatch(): Promise<MatchedUserResponse> {
-  const userId = getUserIdFromLocalStorage();
+  const userId = getUserId();
 
   if (!userId) {
     return createUserIdError();
@@ -29,30 +30,30 @@ export async function fetchCurrentMatch(): Promise<MatchedUserResponse> {
 }
 
 /**
- * マッチング履歴取得関数
- * @returns マッチング履歴一覧
- */
-export async function fetchMatchHistory(): Promise<MatchesResponse> {
-  const userId = getUserIdFromLocalStorage();
-
-  if (!userId) {
-    return createUserIdError();
-  }
-
-  return fetchApi<MatchesResponse>(`${API_BASE_URL}/history`);
-}
-
-/**
  * マッチングキャンセル関数
- * @param matchId キャンセルするマッチングID
+ * @param matchId マッチID
  * @returns キャンセル結果
  */
 export async function cancelMatch(matchId: number): Promise<MatchResponse> {
-  const userId = getUserIdFromLocalStorage();
+  const userId = getUserId();
 
   if (!userId) {
     return createUserIdError();
   }
 
   return patchApi<MatchResponse>(`${API_BASE_URL}/${matchId}/cancel`, { userId });
+}
+
+/**
+ * マッチング履歴取得関数
+ * @returns マッチング履歴
+ */
+export async function fetchMatchHistory(): Promise<MatchesResponse> {
+  const userId = getUserId();
+
+  if (!userId) {
+    return createUserIdError();
+  }
+
+  return fetchApi<MatchesResponse>(`${API_BASE_URL}/history?userId=${userId}`);
 }

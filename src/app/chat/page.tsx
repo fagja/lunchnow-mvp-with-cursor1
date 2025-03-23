@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
 import { MessageBubble } from '@/components/chat/message-bubble';
 import { Modal } from '@/components/ui/modal';
 import { fetchCurrentMatch, cancelMatch } from '@/api/matches';
-import { fetchMessages, sendMessage } from '@/api/messages';
+import { sendMessage } from '@/api/messages';
 import { Message, MatchedUser } from '@/types/database.types';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { useChatPolling } from './hooks/useChatPolling';
 
 // ローディング状態の型定義
 type StatusState = {
@@ -22,7 +23,6 @@ export default function ChatPage() {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [matchInfo, setMatchInfo] = useState<MatchedUser | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [status, setStatus] = useState<StatusState>({
     isLoading: true,
@@ -31,11 +31,9 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showCanceledModal, setShowCanceledModal] = useState(false);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const [isActive, setIsActive] = useState(true); // 画面アクティブ状態の追跡
 
-  // マッチ情報とメッセージを取得する
-  const loadMatchAndMessages = async () => {
+  // マッチ情報を取得する
+  const loadMatchInfo = async () => {
     try {
       setStatus(prev => ({ ...prev, isLoading: true }));
       setError(null);
@@ -56,16 +54,12 @@ export default function ChatPage() {
         return;
       }
 
+      // マッチング情報をセット
+      console.log('マッチング情報取得成功:', matchResponse.data.match_id);
       setMatchInfo(matchResponse.data);
 
-      // マッチIDがある場合、メッセージを取得
-      if (matchResponse.data.match_id) {
-        const messagesResponse = await fetchMessages(matchResponse.data.match_id);
-
-        if (messagesResponse.data) {
-          setMessages(messagesResponse.data);
-        }
-      }
+      // セッションストレージにマッチングIDを保存（遷移間の整合性のため）
+      sessionStorage.setItem('current_match_id', String(matchResponse.data.match_id));
     } catch (err) {
       console.error('チャットデータ取得エラー:', err);
       setError(API_ERROR_MESSAGES.FETCH_MESSAGES);
@@ -74,102 +68,54 @@ export default function ChatPage() {
     }
   };
 
-  // メッセージをポーリングする関数を定義（useCallbackでメモ化）
-  const pollMessages = useCallback(async () => {
-    // 非アクティブまたはマッチIDがない場合は実行しない
-    if (!isActive || !matchInfo?.match_id) return;
+  // マッチングがキャンセルされた場合のコールバック
+  const handleMatchCanceled = () => {
+    // 実際にキャンセルされたかどうかを再確認
+    const storedMatchId = sessionStorage.getItem('current_match_id');
+    console.log('キャンセル検出:', {
+      stored: storedMatchId,
+      current: matchInfo?.match_id
+    });
 
-    try {
-      // 現在のマッチ状態を取得して、キャンセルされていないか確認
-      const matchResponse = await fetchCurrentMatch();
-
-      // マッチングがキャンセルされていた場合
-      if (!matchResponse.data || matchResponse.data.match_id !== matchInfo.match_id) {
-        if (pollingInterval) {
-          clearInterval(pollingInterval);
-          setPollingInterval(null);
-        }
-        setShowCanceledModal(true);
-        return;
-      }
-
-      // マッチが有効な場合のみメッセージを取得
-      const messagesResponse = await fetchMessages(matchInfo.match_id);
-      if (messagesResponse.data) {
-        // 現在と新しいメッセージ配列の長さを比較
-        const currentLength = messages.length;
-        const newMessages = messagesResponse.data;
-
-        // 新しいメッセージがある場合のみ状態を更新（パフォーマンス最適化）
-        if (newMessages.length !== currentLength) {
-          setMessages(newMessages);
-        }
-      }
-    } catch (err) {
-      console.error('メッセージポーリングエラー:', err);
-      // エラー表示はユーザーエクスペリエンスを損なわない範囲で行う
-      // 一時的なネットワークエラーの場合、次のポーリングで自動的に回復する可能性がある
+    // マッチングが取得できている場合は誤検出の可能性があるので、再確認する
+    if (matchInfo && matchInfo.match_id && (!storedMatchId || Number(storedMatchId) === matchInfo.match_id)) {
+      console.log('キャンセル誤検出の可能性があるため、無視します');
+      return;
     }
-  }, [matchInfo?.match_id, messages.length, pollingInterval, isActive]);
 
-  // 画面のフォーカス状態を監視して、ポーリングを制御する
+    // 実際にキャンセルされた場合のみモーダル表示
+    setShowCanceledModal(true);
+  };
+
+  // ポーリングフックを使用
+  const { messages, isLoading, error: pollingError } = useChatPolling(
+    matchInfo?.match_id,
+    matchInfo?.match_id,
+    {
+      interval: 3000, // 3秒間隔
+      onNewMessages: (newMessages) => {
+        // 必要に応じて追加の処理を実装
+      },
+      onMatchCanceled: handleMatchCanceled,
+      onError: (err) => {
+        console.error('メッセージポーリングエラー:', err);
+        // UI上にはエラーを表示しない（UXを損なわないため）
+      },
+    }
+  );
+
+  // 初回レンダリング時にデータを取得
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsActive(!document.hidden);
-    };
+    loadMatchInfo();
+  }, [router]);
 
-    // visibilitychangeイベントのリスナーを追加
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // クリーンアップ関数
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  // アクティブ状態が変化したときのポーリング制御
+  // ポーリングエラーを状態に反映
   useEffect(() => {
-    // 非アクティブになったときにポーリングを停止
-    if (!isActive && pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
+    if (pollingError) {
+      console.error('ポーリングエラー:', pollingError);
+      // エラーメッセージはUXを損なわないよう表示しない
     }
-    // アクティブになったときにポーリングを再開
-    else if (isActive && !pollingInterval && matchInfo?.match_id) {
-      // すぐに一度データを取得
-      pollMessages();
-
-      // 3秒間隔でポーリングを開始
-      const interval = setInterval(pollMessages, 3000);
-      setPollingInterval(interval);
-    }
-
-    // コンポーネントのアンマウント時にクリーンアップ
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-    };
-  }, [isActive, matchInfo?.match_id, pollingInterval, pollMessages]);
-
-  // 初回レンダリング時にデータを取得し、ポーリングを設定
-  useEffect(() => {
-    loadMatchAndMessages();
-
-    // マウント時の初期ポーリング設定（画面がアクティブな場合のみ）
-    if (isActive) {
-      const interval = setInterval(pollMessages, 3000);
-      setPollingInterval(interval);
-    }
-
-    // クリーンアップ関数でポーリングを停止
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-        setPollingInterval(null);
-      }
-    };
-  }, [router, pollMessages, isActive]);
+  }, [pollingError]);
 
   // メッセージが更新されたらスクロールを一番下に移動
   useEffect(() => {
@@ -183,7 +129,7 @@ export default function ChatPage() {
 
   // メッセージを送信する関数
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !matchInfo?.match_id) return;
+    if (!inputValue.trim() || matchInfo === null || matchInfo.match_id === null) return;
 
     const content = inputValue.trim();
     // 先に入力をクリア（UXの向上）
@@ -200,10 +146,7 @@ export default function ChatPage() {
         return;
       }
 
-      // 送信成功したらメッセージ一覧に追加（イミュータブルに処理）
-      if (response.data) {
-        setMessages(prevMessages => [...prevMessages, response.data]);
-      }
+      // 送信成功時はポーリングによって自動的にメッセージリストが更新される
     } catch (err) {
       console.error('メッセージ送信エラー:', err);
       setError(API_ERROR_MESSAGES.SEND_MESSAGE);
@@ -224,7 +167,7 @@ export default function ChatPage() {
     try {
       setStatus(prev => ({ ...prev, isLoading: true }));
 
-      if (!matchInfo?.match_id) {
+      if (matchInfo === null || matchInfo.match_id === null) {
         throw new Error('マッチングIDが取得できません');
       }
 
@@ -234,12 +177,6 @@ export default function ChatPage() {
         setError(response.error);
         setShowCancelModal(false);
         return;
-      }
-
-      // ポーリングを停止
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-        setPollingInterval(null);
       }
 
       // キャンセル成功したらユーザー一覧に遷移
@@ -259,7 +196,7 @@ export default function ChatPage() {
     router.push('/users');
   };
 
-  // エンターキーでメッセージ送信（Shiftキー + Enterは改行）
+  // エンターキーでメッセージを送信
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -267,109 +204,111 @@ export default function ChatPage() {
     }
   };
 
-  return (
-    <PageContainer>
-      <div className="h-full flex flex-col">
-        {/* ヘッダー */}
-        <div className="flex justify-between items-center p-4 border-b">
-          <div>
-            {matchInfo ? (
-              <>
-                <h1 className="font-bold text-lg">{matchInfo.user.nickname}</h1>
-                <p className="text-sm text-gray-600">
-                  {matchInfo.user.grade} {matchInfo.user.department}
-                </p>
-              </>
-            ) : status.isLoading ? (
-              <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
-            ) : (
-              <p>情報がありません</p>
-            )}
-          </div>
+  // ローディング中はスピナーを表示
+  if (status.isLoading && !matchInfo) {
+    return (
+      <PageContainer className="flex flex-col justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="mt-4 text-gray-600">ロード中...</p>
+      </PageContainer>
+    );
+  }
 
+  return (
+    <PageContainer className="flex flex-col h-screen pb-0">
+      {/* ヘッダー */}
+      <div className="flex justify-between items-center py-4 border-b">
+        <div>
+          <h1 className="text-lg font-semibold">
+            {matchInfo?.user?.nickname}さんとチャット
+          </h1>
+          <p className="text-sm text-gray-500">
+            {matchInfo?.user?.end_time && `〜${matchInfo.user.end_time}`} {matchInfo?.user?.place}
+          </p>
+        </div>
+        <Button
+          onClick={handleShowCancelModal}
+          variant="destructive"
+          className="text-sm"
+        >
+          キャンセル
+        </Button>
+      </div>
+
+      {/* エラーメッセージ */}
+      {error && (
+        <ErrorMessage
+          message={error}
+          className="mt-4"
+          onRetry={() => setError(null)}
+        />
+      )}
+
+      {/* メッセージエリア */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            メッセージを送信してみましょう
+          </div>
+        ) : (
+          messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isMine={message.from_user_id === matchInfo?.current_user_id}
+            />
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* 入力エリア */}
+      <div className="border-t p-4 bg-white">
+        <div className="flex space-x-2">
+          <textarea
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="メッセージを入力..."
+            maxLength={200}
+            className="flex-1 min-h-[60px] p-2 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+          />
           <Button
-            variant="outline"
-            onClick={handleShowCancelModal}
-            className="text-red-500 border-red-300 hover:bg-red-50"
-            disabled={status.isLoading}
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || status.isSending}
+            className="self-end"
           >
-            キャンセル
+            {status.isSending ? (
+              <span className="flex items-center">
+                <span className="animate-spin h-4 w-4 mr-2 border-b-2 border-white rounded-full"></span>
+                送信中...
+              </span>
+            ) : (
+              '送信'
+            )}
           </Button>
         </div>
-
-        {/* エラーメッセージ */}
-        <ErrorMessage error={error} className="mx-4" />
-
-        {/* メッセージ一覧 */}
-        <div className="flex-grow overflow-y-auto p-4 bg-gray-50">
-          {status.isLoading && messages.length === 0 ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
-          ) : messages.length > 0 ? (
-            <>
-              {messages.map(message => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  isMine={message.from_user_id !== matchInfo?.user.id}
-                />
-              ))}
-              <div ref={messagesEndRef} />
-            </>
-          ) : (
-            <div className="text-center text-gray-500 py-8">
-              メッセージがありません。最初のメッセージを送信しましょう！
-            </div>
-          )}
-        </div>
-
-        {/* メッセージ入力 */}
-        <form onSubmit={handleSendMessage} className="border-t p-4 bg-white">
-          <div className="flex">
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="メッセージを入力..."
-              maxLength={200}
-              className="flex-1 p-2 border border-gray-300 rounded-l-md focus:ring-primary focus:border-primary resize-none min-h-[50px] max-h-[100px]"
-              disabled={status.isSending || status.isLoading}
-            />
-            <Button
-              type="submit"
-              disabled={!inputValue.trim() || status.isSending || status.isLoading}
-              className="rounded-l-none"
-            >
-              送信
-            </Button>
-          </div>
-          <div className="text-xs text-right text-gray-500 mt-1">
-            {inputValue.length}/200文字
-          </div>
-        </form>
       </div>
 
       {/* キャンセル確認モーダル */}
       <Modal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
-        title="マッチングをキャンセルしますか？"
-        description="相手にもキャンセルが通知されます。この操作は元に戻せません。"
-        showCancelButton={true}
-        cancelText="戻る"
-        confirmText="キャンセルする"
-        onCancel={() => setShowCancelModal(false)}
+        title="ランチをキャンセルしますか？"
+        description="マッチングをキャンセルするとユーザー一覧に戻ります。"
         onConfirm={handleCancelMatch}
+        confirmText="キャンセルする"
+        cancelText="戻る"
       />
 
       {/* キャンセルされたモーダル */}
       <Modal
         isOpen={showCanceledModal}
         onClose={handleCanceledModalClose}
-        title="マッチングがキャンセルされました"
-        description="相手がマッチングをキャンセルしました。ユーザー一覧に戻ります。"
+        title="ランチがキャンセルされました"
+        description={`${matchInfo?.user?.nickname}さんがランチをキャンセルしました。ユーザー一覧に戻ります。`}
         onConfirm={handleCanceledModalClose}
+        confirmText="OK"
         autoCloseMs={2000}
       />
     </PageContainer>

@@ -1,5 +1,86 @@
 import { RecruitingUsersResponse } from '@/types/api.types';
-import { fetchApi, getUserIdFromLocalStorage } from './api-client';
+import { fetchApi, createUserIdError } from './api-client';
+import { getUserId, validateUserId } from '@/lib/storage-utils';
+
+/**
+ * APIのベースURL
+ */
+const API_BASE_URL = '/api/users/recruiting';
+
+/**
+ * 募集中ユーザー一覧取得の基本関数
+ * URLとオプションを指定して募集中ユーザーを取得
+ *
+ * @param url カスタムURL（指定されていない場合は標準URLを使用）
+ * @param options fetchオプション
+ * @returns 募集中ユーザー一覧
+ */
+async function fetchRecruitingUsersBase(
+  url?: string,
+  options?: RequestInit
+): Promise<RecruitingUsersResponse> {
+  const currentUserId = getUserId();
+
+  if (!currentUserId) {
+    return createUserIdError();
+  }
+
+  // URLが指定されている場合はそのまま使用、ない場合は生成
+  const apiUrl = url || `${API_BASE_URL}?currentUserId=${currentUserId}`;
+
+  // キャッシュを無効化するフェッチオプションを作成
+  const fetchOptions: RequestInit = {
+    ...options,
+    cache: 'no-store', // キャッシュを無効化
+    headers: {
+      ...options?.headers,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
+    }
+  };
+
+  try {
+    const response = await fetchApi<RecruitingUsersResponse['data']>(apiUrl, fetchOptions);
+    return response;
+  } catch (error) {
+    console.error('募集中ユーザー取得エラー:', error);
+    return {
+      error: 'エラーが発生しました',
+      status: 500
+    };
+  }
+}
+
+/**
+ * 募集中ユーザー一覧取得関数
+ * @returns 募集中ユーザー一覧
+ */
+export async function fetchRecruitingUsers(): Promise<RecruitingUsersResponse> {
+  return fetchRecruitingUsersBase();
+}
+
+/**
+ * 指定時間内に募集状態を更新したユーザー取得関数
+ *
+ * 自分のIDと異なるユーザーを取得
+ * マッチング済みのユーザーは除外
+ *
+ * @param minutes 何分以内の更新かを指定（デフォルト20分）
+ * @returns 募集中ユーザー一覧
+ */
+export async function fetchRecentRecruitingUsers(
+  minutes: number = 20
+): Promise<RecruitingUsersResponse> {
+  const currentUserId = getUserId();
+
+  if (!currentUserId) {
+    return createUserIdError();
+  }
+
+  return fetchRecruitingUsersBase(
+    `${API_BASE_URL}/recent?currentUserId=${currentUserId}&minutes=${minutes}`
+  );
+}
 
 /**
  * 募集中ユーザーリスト取得のデフォルトキャッシュ時間（秒）
@@ -12,31 +93,10 @@ const DEFAULT_CACHE_TIME = 30; // 30秒
  * @param url - SWRによって生成されたキー
  * @returns 募集中ユーザー一覧のレスポンス
  */
-export async function fetchRecruitingUsers(url?: string): Promise<RecruitingUsersResponse> {
-  const currentUserId = getUserIdFromLocalStorage();
-
-  if (!currentUserId) {
-    return {
-      error: 'エラーが発生しました',
-      status: 400
-    };
-  }
-
-  // URLが指定されている場合はそのまま使用、ない場合は生成
-  const apiUrl = url || `/api/users/recruiting?currentUserId=${currentUserId}`;
-
-  try {
-    return await fetchApi<RecruitingUsersResponse>(apiUrl, {
-      // キャッシュ制御ヘッダー設定
-      cache: 'no-cache' // 常に最新データを取得
-    });
-  } catch (error) {
-    console.error('募集中ユーザー取得エラー:', error);
-    return {
-      error: 'エラーが発生しました',
-      status: 500
-    };
-  }
+export async function fetchRecruitingUsersForSwr(url?: string): Promise<RecruitingUsersResponse> {
+  return fetchRecruitingUsersBase(url, {
+    cache: 'no-cache' // 常に最新データを取得
+  });
 }
 
 /**
@@ -44,10 +104,10 @@ export async function fetchRecruitingUsers(url?: string): Promise<RecruitingUser
  * @returns SWRのキー、またはnull（ユーザーIDが取得できない場合）
  */
 export function getRecruitingUsersKey() {
-  const currentUserId = getUserIdFromLocalStorage();
+  const currentUserId = getUserId();
   if (!currentUserId) return null;
 
-  return `/api/users/recruiting?currentUserId=${currentUserId}`;
+  return `${API_BASE_URL}?currentUserId=${currentUserId}`;
 }
 
 /**
