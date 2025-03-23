@@ -5,6 +5,7 @@ import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
 import { ApiResponse } from '@/types/api.types';
 import { messageConfig } from '@/lib/swr-config';
 import { usePollingWithSWR, PollingWithSWRResponse } from '@/hooks/usePollingWithSWR';
+import { useSWRPolling, SWRPollingResponse } from '@/hooks/useSWRPolling';
 import { fetcher } from '@/lib/fetcher';
 import { MessageDTO, MessageHistoryResponse, LatestMessagesResponse } from '@/types/message';
 
@@ -68,9 +69,31 @@ export function useMessageHistory(
 
 /**
  * メッセージ履歴をリアルタイムで取得するフック
- * ポーリングとSWRを組み合わせて使用
+ * SWRの内蔵ポーリング機能を使用
  */
 export function useRealtimeMessageHistory(
+  matchId: string | null,
+  page = 1,
+  limit = 20
+): SWRPollingResponse<MessageHistoryResponse> {
+  const key = matchId ? getMessageHistoryKey(matchId, page, limit) : null;
+
+  return useSWRPolling<MessageHistoryResponse>(
+    key,
+    fetcher,
+    {
+      refreshInterval: 3000, // 3秒間隔でポーリング
+      stopOnBackground: true, // バックグラウンド時にポーリングを停止
+      ...messageConfig,
+    }
+  );
+}
+
+/**
+ * 旧式のポーリング実装 - 互換性のために残す
+ * @deprecated useRealtimeMessageHistory を使用してください
+ */
+export function useRealtimeMessageHistoryLegacy(
   matchId: string | null,
   page = 1,
   limit = 20
@@ -103,9 +126,27 @@ export function useLatestMessages(): SWRResponse<LatestMessagesResponse> {
 
 /**
  * 最新メッセージをリアルタイムで取得するフック
- * ポーリングとSWRを組み合わせて使用
+ * SWRの内蔵ポーリング機能を使用
  */
-export function useRealtimeLatestMessages(): PollingWithSWRResponse<LatestMessagesResponse> {
+export function useRealtimeLatestMessages(): SWRPollingResponse<LatestMessagesResponse> {
+  const key = getLatestMessagesKey();
+
+  return useSWRPolling<LatestMessagesResponse>(
+    key,
+    fetcher,
+    {
+      refreshInterval: 3000, // 3秒間隔でポーリング
+      stopOnBackground: true, // バックグラウンド時にポーリングを停止
+      ...messageConfig,
+    }
+  );
+}
+
+/**
+ * 旧式のポーリング実装 - 互換性のために残す
+ * @deprecated useRealtimeLatestMessages を使用してください
+ */
+export function useRealtimeLatestMessagesLegacy(): PollingWithSWRResponse<LatestMessagesResponse> {
   const key = getLatestMessagesKey();
 
   return usePollingWithSWR<LatestMessagesResponse>(

@@ -283,8 +283,9 @@ export function saveUserId(userId: number): boolean {
 }
 
 /**
- * ユーザーIDを取得する関数
- * CookieとLocalStorageの両方から取得を試み、Cookieを優先する
+ * クライアントコンポーネント用のユーザーID取得関数
+ * Cookieを優先し、次にLocalStorageを使用します。サーバーコンポーネントでは使用できません。
+ * サーバーコンポーネントでは代わりに server-utils.ts の getUserId() を使用してください。
  *
  * @returns 保存されたユーザーID、存在しない場合または取得に失敗した場合はnull
  */

@@ -53,7 +53,7 @@ export async function removeServerCookie(name: string, path: string = '/'): Prom
 
 /**
  * サーバー側でユーザーIDを取得する関数
- * @deprecated getUserIdFromServer を使用してください
+ * @deprecated この関数は将来のバージョンで削除されます。代わりに auth-utils.ts の getUserIdFromServer() を使用してください
  * @returns サーバーサイドで取得したユーザーID、存在しない場合はnull
  */
 export async function getServerUserId(): Promise<number | null> {
@@ -61,8 +61,10 @@ export async function getServerUserId(): Promise<number | null> {
 }
 
 /**
- * サーバーコンポーネントからユーザーIDを取得する関数
- * @returns ユーザーID（存在しない場合はnull）
+ * サーバーコンポーネントからユーザーIDを取得する同期関数
+ * サーバーコンポーネント内でのみ使用できます。クライアントコンポーネントでは utils.ts の getUserId() を使用してください。
+ *
+ * @returns サーバーサイドで取得したユーザーID（存在しない場合はnull）
  */
 export function getUserId(): number | null {
   return getUserIdFromServerSync();
