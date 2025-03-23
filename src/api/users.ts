@@ -8,10 +8,9 @@ import {
   fetchApi,
   postApi,
   patchApi,
-  getUserId,
-  saveUserId,
   createUserIdError
 } from './api-client';
+import { getUserId, saveUserId } from '@/lib/utils';
 
 /**
  * APIのベースURL
@@ -166,6 +165,3 @@ export async function fetchCurrentUser(): Promise<UserResponse> {
     };
   }
 }
-
-// ユーザーID関連の関数をエクスポート
-export { getUserId, saveUserId };

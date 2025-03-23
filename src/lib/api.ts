@@ -1,4 +1,7 @@
-import originalUseSWR, { SWRResponse, SWRConfiguration } from 'swr';
+'use client';
+
+import { SWRResponse, SWRConfiguration } from 'swr';
+import useSWRBase from 'swr';
 import { getUserId } from './utils';
 import { ERROR_CODES, ERROR_MESSAGES } from './constants';
 import { ApiResponse } from '@/types/api.types';
@@ -35,8 +38,8 @@ export function useSWRWithAuth<T = any>(
   config?: SWRConfiguration
 ): SWRResponse<T> {
   // キーがnullの場合（ユーザーIDが取得できない場合など）はリクエストしない
-  return originalUseSWR<T>(key, fetcher, {
-    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+  return useSWRBase<T>(key, fetcher, {
+    onErrorRetry: (error: any, key: any, config: any, revalidate: any, { retryCount }: { retryCount: any }) => {
       // 認証エラー（401）の場合はリトライしない
       if (error.status === 401) return;
 
@@ -66,8 +69,8 @@ export function useSWR<T = any>(
 export function createNoUserIdError<T>(): ApiResponse<T> {
   return {
     error: {
-      code: ERROR_CODES.UNAUTHORIZED,
-      message: ERROR_MESSAGES[ERROR_CODES.UNAUTHORIZED]
+      code: ERROR_CODES.AUTH_ERROR,
+      message: ERROR_MESSAGES[ERROR_CODES.AUTH_ERROR]
     },
     status: 401,
     data: undefined
@@ -101,8 +104,8 @@ export async function fetchApi<T = any>(url: string, options?: RequestInit): Pro
     console.error('API fetch error:', error);
     return {
       error: {
-        code: ERROR_CODES.SERVER_ERROR,
-        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
       },
       status: 500,
       data: undefined
@@ -138,8 +141,8 @@ export async function postApi<T = any>(url: string, data: any, options?: Request
     console.error('API post error:', error);
     return {
       error: {
-        code: ERROR_CODES.SERVER_ERROR,
-        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
       },
       status: 500,
       data: undefined
@@ -175,8 +178,8 @@ export async function patchApi<T = any>(url: string, data: any, options?: Reques
     console.error('API patch error:', error);
     return {
       error: {
-        code: ERROR_CODES.SERVER_ERROR,
-        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
       },
       status: 500,
       data: undefined
@@ -211,8 +214,8 @@ export async function deleteApi<T = any>(url: string, options?: RequestInit): Pr
     console.error('API delete error:', error);
     return {
       error: {
-        code: ERROR_CODES.SERVER_ERROR,
-        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
       },
       status: 500,
       data: undefined

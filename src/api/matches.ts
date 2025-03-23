@@ -3,6 +3,7 @@ import { API_BASE_URL, createNoUserIdError, useSWR } from '@/lib/api';
 import { getUserId } from '@/lib/utils';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
 import { ApiResponse } from '@/types/api.types';
+import { matchingConfig } from '@/lib/swr-config';
 
 /**
  * マッチを作成するAPI
@@ -33,8 +34,8 @@ export async function createMatch(userId1: number, userId2: number): Promise<Api
     console.error('Error creating match:', error);
     return {
       error: {
-        code: ERROR_CODES.SERVER_ERROR,
-        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
       },
       status: 500,
       data: undefined
@@ -48,14 +49,16 @@ export async function createMatch(userId1: number, userId2: number): Promise<Api
 export function getMatchesKey(page = 1, limit = 10) {
   const userId = getUserId();
   if (!userId) return null;
-  return `/matches?userId=${userId}&page=${page}&limit=${limit}`;
+  return `/matches?page=${page}&limit=${limit}`;
 }
 
 /**
  * ユーザーのマッチ一覧を取得するカスタムフック
  */
 export function useMatches(page = 1, limit = 10): SWRResponse {
-  return useSWR(getMatchesKey(page, limit));
+  return useSWR(getMatchesKey(page, limit), {
+    ...matchingConfig,
+  });
 }
 
 /**
@@ -71,7 +74,9 @@ export function getMatchDetailKey(matchId: number) {
  * 特定のマッチの詳細を取得するカスタムフック
  */
 export function useMatchDetail(matchId: number): SWRResponse {
-  return useSWR(getMatchDetailKey(matchId));
+  return useSWR(getMatchDetailKey(matchId), {
+    ...matchingConfig,
+  });
 }
 
 /**
@@ -80,14 +85,16 @@ export function useMatchDetail(matchId: number): SWRResponse {
 export function getMatchStatusKey(otherUserId: number) {
   const userId = getUserId();
   if (!userId) return null;
-  return `/matches/status?userId=${userId}&otherUserId=${otherUserId}`;
+  return `/matches/status/${otherUserId}`;
 }
 
 /**
  * ユーザー間のマッチ状態を確認するカスタムフック
  */
 export function useMatchStatus(otherUserId: number): SWRResponse {
-  return useSWR(getMatchStatusKey(otherUserId));
+  return useSWR(getMatchStatusKey(otherUserId), {
+    ...matchingConfig,
+  });
 }
 
 /**
@@ -116,8 +123,8 @@ export async function updateMatch(matchId: number, updateData: { status?: string
     console.error('Error updating match:', error);
     return {
       error: {
-        code: ERROR_CODES.SERVER_ERROR,
-        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
       },
       status: 500,
       data: undefined

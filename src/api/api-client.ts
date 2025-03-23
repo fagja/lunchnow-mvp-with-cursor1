@@ -3,47 +3,20 @@
  */
 
 import { ApiResponse, ApiError } from '@/types/api.types';
-import { getUserId as getStoredUserId, saveUserId as saveStoredUserId, localStorageKeys } from '@/lib/utils';
-import { STORAGE_KEYS } from "@/lib/constants";
+import { getUserId, saveUserId, localStorageKeys } from '@/lib/utils';
+import { STORAGE_KEYS, USER_ID_ERROR_MESSAGE, ERROR_CODES, ERROR_MESSAGES } from "@/lib/constants";
 
 // 拡張フェッチオプション型定義
 type ExtendedFetchOptions = RequestInit & {
   timeout?: number;
 };
 
-// エラーコード定義
-export const errorCodes = {
-  NETWORK_ERROR: 'network_error',
-  TIMEOUT_ERROR: 'timeout_error',
-  UNAUTHORIZED: 'unauthorized_error',
-  NOT_FOUND: 'not_found_error',
-  SERVER_ERROR: 'server_error',
-  VALIDATION_ERROR: 'validation_error',
-  UNKNOWN_ERROR: 'unknown_error'
-};
-
 /**
  * 外部APIのベースURL
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_VERCEL_URL
-  ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api`
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
+  ? process.env.NEXT_PUBLIC_API_BASE_URL
   : 'http://localhost:3000/api';
-
-/**
- * ユーザーIDを取得する関数
- * @returns ユーザーID（存在しない場合はnull）
- */
-export function getUserId(): number | null {
-  return getStoredUserId();
-}
-
-/**
- * ユーザーIDを保存する関数
- * @param userId ユーザーID
- */
-export function saveUserId(userId: number): void {
-  saveStoredUserId(userId);
-}
 
 /**
  * ユーザーIDが存在しない場合のエラーレスポンスを生成
@@ -51,9 +24,10 @@ export function saveUserId(userId: number): void {
  */
 export function createUserIdError<T>(): ApiResponse<T> {
   return {
+    data: null,
     error: {
-      code: errorCodes.UNAUTHORIZED,
-      message: 'ユーザーIDが取得できません。再度ログインしてください。'
+      code: ERROR_CODES.USER_ID_NOT_FOUND,
+      message: USER_ID_ERROR_MESSAGE
     },
     status: 401
   };
@@ -66,15 +40,17 @@ export function createUserIdError<T>(): ApiResponse<T> {
 export function getErrorCodeFromStatus(status: number): string {
   switch (true) {
     case status === 400:
-      return errorCodes.VALIDATION_ERROR;
+      return ERROR_CODES.USER_INPUT_ERROR;
     case status === 401:
-      return errorCodes.UNAUTHORIZED;
+      return ERROR_CODES.AUTH_ERROR;
+    case status === 403:
+      return ERROR_CODES.AUTH_ERROR;
     case status === 404:
-      return errorCodes.NOT_FOUND;
+      return ERROR_CODES.NOT_FOUND;
     case status >= 500:
-      return errorCodes.SERVER_ERROR;
+      return ERROR_CODES.SERVER_ERROR;
     default:
-      return errorCodes.UNKNOWN_ERROR;
+      return ERROR_CODES.SYSTEM_ERROR;
   }
 }
 
@@ -85,15 +61,17 @@ export function getErrorCodeFromStatus(status: number): string {
 export function getErrorMessageFromStatus(status: number): string {
   switch (true) {
     case status === 400:
-      return 'リクエストに問題があります。入力内容を確認してください。';
+      return ERROR_MESSAGES[ERROR_CODES.USER_INPUT_ERROR];
     case status === 401:
-      return '認証に失敗しました。再度ログインしてください。';
+      return ERROR_MESSAGES[ERROR_CODES.AUTH_ERROR];
+    case status === 403:
+      return ERROR_MESSAGES[ERROR_CODES.AUTH_ERROR];
     case status === 404:
-      return 'リクエストされたリソースが見つかりません。';
+      return ERROR_MESSAGES[ERROR_CODES.NOT_FOUND];
     case status >= 500:
-      return 'サーバーでエラーが発生しました。しばらく経ってからお試しください。';
+      return ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR];
     default:
-      return '予期しないエラーが発生しました。';
+      return ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR];
   }
 }
 
@@ -146,10 +124,10 @@ export async function fetchApi<T>(url: string, options: ExtendedFetchOptions = {
 
     // エラーハンドリング
     const errorObj: ApiError = {
-      code: error.name === 'AbortError' ? errorCodes.TIMEOUT_ERROR : errorCodes.NETWORK_ERROR,
+      code: error.name === 'AbortError' ? ERROR_CODES.TIMEOUT_ERROR : ERROR_CODES.NETWORK_ERROR,
       message: error.name === 'AbortError'
-        ? 'リクエストがタイムアウトしました。ネットワーク接続を確認してください。'
-        : 'ネットワークエラーが発生しました。インターネット接続を確認してください。'
+        ? ERROR_MESSAGES[ERROR_CODES.TIMEOUT_ERROR]
+        : ERROR_MESSAGES[ERROR_CODES.NETWORK_ERROR]
     };
 
     return {
@@ -245,10 +223,10 @@ async function sendRequestWithBody<T>(
 
     // エラーハンドリング
     const errorObj: ApiError = {
-      code: error.name === 'AbortError' ? errorCodes.TIMEOUT_ERROR : errorCodes.NETWORK_ERROR,
+      code: error.name === 'AbortError' ? ERROR_CODES.TIMEOUT_ERROR : ERROR_CODES.NETWORK_ERROR,
       message: error.name === 'AbortError'
-        ? 'リクエストがタイムアウトしました。ネットワーク接続を確認してください。'
-        : 'ネットワークエラーが発生しました。インターネット接続を確認してください。'
+        ? ERROR_MESSAGES[ERROR_CODES.TIMEOUT_ERROR]
+        : ERROR_MESSAGES[ERROR_CODES.NETWORK_ERROR]
     };
 
     return {

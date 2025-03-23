@@ -3,6 +3,10 @@ import { API_BASE_URL, createNoUserIdError, useSWR } from '@/lib/api';
 import { getUserId } from '@/lib/utils';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
 import { ApiResponse } from '@/types/api.types';
+import { messageConfig } from '@/lib/swr-config';
+import { usePollingWithSWR, PollingWithSWRResponse } from '@/hooks/usePollingWithSWR';
+import { fetcher } from '@/lib/fetcher';
+import { MessageDTO, MessageHistoryResponse, LatestMessagesResponse } from '@/types/message';
 
 /**
  * メッセージを送信するAPI
@@ -34,8 +38,8 @@ export async function sendMessage(matchId: number, message: string): Promise<Api
     console.error('Error sending message:', error);
     return {
       error: {
-        code: ERROR_CODES.SERVER_ERROR,
-        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
       },
       status: 500,
       data: undefined
@@ -44,33 +48,73 @@ export async function sendMessage(matchId: number, message: string): Promise<Api
 }
 
 /**
- * マッチのメッセージ履歴を取得するSWRキーを生成
+ * メッセージ履歴取得用のSWRキーを生成
  */
-export function getMessageHistoryKey(matchId: number, page = 1, limit = 50) {
-  const userId = getUserId();
-  if (!userId) return null;
-  return `/messages/history?matchId=${matchId}&userId=${userId}&page=${page}&limit=${limit}`;
+export const getMessageHistoryKey = (matchId: string, page = 1, limit = 20) =>
+  `/matches/${matchId}/messages?page=${page}&limit=${limit}`;
+
+/**
+ * メッセージ履歴を取得するフック
+ * 通常のSWRを使用し、3秒ごとに自動更新
+ */
+export function useMessageHistory(
+  matchId: string | null,
+  page = 1,
+  limit = 20
+): SWRResponse<MessageHistoryResponse> {
+  const key = matchId ? getMessageHistoryKey(matchId, page, limit) : null;
+  return useSWR<MessageHistoryResponse>(key, fetcher, messageConfig);
 }
 
 /**
- * マッチのメッセージ履歴を取得するカスタムフック
+ * メッセージ履歴をリアルタイムで取得するフック
+ * ポーリングとSWRを組み合わせて使用
  */
-export function useMessageHistory(matchId: number, page = 1, limit = 50): SWRResponse {
-  return useSWR(getMessageHistoryKey(matchId, page, limit));
+export function useRealtimeMessageHistory(
+  matchId: string | null,
+  page = 1,
+  limit = 20
+): PollingWithSWRResponse<MessageHistoryResponse> {
+  const key = matchId ? getMessageHistoryKey(matchId, page, limit) : null;
+
+  return usePollingWithSWR<MessageHistoryResponse>(
+    key,
+    () => fetcher(key as string),
+    {
+      interval: 3000, // 3秒間隔でポーリング
+      swrConfig: messageConfig,
+      stopOnBackground: true, // バックグラウンド時にポーリングを停止
+    }
+  );
 }
 
 /**
- * マッチの最新メッセージ情報を取得するSWRキーを生成
+ * 最新メッセージ取得用のSWRキーを生成
  */
-export function getLatestMessagesKey() {
-  const userId = getUserId();
-  if (!userId) return null;
-  return `/messages/latest?userId=${userId}`;
+export const getLatestMessagesKey = () => '/messages/latest';
+
+/**
+ * 最新メッセージを取得するフック
+ * 通常のSWRを使用し、3秒ごとに自動更新
+ */
+export function useLatestMessages(): SWRResponse<LatestMessagesResponse> {
+  return useSWR<LatestMessagesResponse>(getLatestMessagesKey(), fetcher, messageConfig);
 }
 
 /**
- * マッチの最新メッセージ情報を取得するカスタムフック
+ * 最新メッセージをリアルタイムで取得するフック
+ * ポーリングとSWRを組み合わせて使用
  */
-export function useLatestMessages(): SWRResponse {
-  return useSWR(getLatestMessagesKey());
+export function useRealtimeLatestMessages(): PollingWithSWRResponse<LatestMessagesResponse> {
+  const key = getLatestMessagesKey();
+
+  return usePollingWithSWR<LatestMessagesResponse>(
+    key,
+    () => fetcher(key),
+    {
+      interval: 3000, // 3秒間隔でポーリング
+      swrConfig: messageConfig,
+      stopOnBackground: true, // バックグラウンド時にポーリングを停止
+    }
+  );
 }

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { STORAGE_KEYS, CookieOptions } from './constants';
-import { getUserIdFromServer } from './auth-utils';
+import { getUserIdFromServer, getUserIdFromServerSync } from './auth-utils';
 
 /**
  * サーバー側でCookieを設定する関数
@@ -58,4 +58,12 @@ export async function removeServerCookie(name: string, path: string = '/'): Prom
  */
 export async function getServerUserId(): Promise<number | null> {
   return await getUserIdFromServer();
+}
+
+/**
+ * サーバーコンポーネントからユーザーIDを取得する関数
+ * @returns ユーザーID（存在しない場合はnull）
+ */
+export function getUserId(): number | null {
+  return getUserIdFromServerSync();
 }

@@ -3,11 +3,28 @@ import { STORAGE_KEYS } from './constants';
 
 /**
  * サーバー側でCookieからユーザーIDを取得する関数
+ * App Router内のサーバーコンポーネントやAPI Routeで使用する
  *
  * @returns Cookieから取得したユーザーID、存在しない場合はnull
  */
 export async function getUserIdFromServer(): Promise<number | null> {
   const cookieStore = await cookies();
+  const userIdCookie = cookieStore.get(STORAGE_KEYS.USER_ID);
+
+  if (!userIdCookie) return null;
+
+  const userId = parseInt(userIdCookie.value, 10);
+  return isNaN(userId) ? null : userId;
+}
+
+/**
+ * サーバーコンポーネントから同期的にユーザーIDを取得する関数
+ * ※パフォーマンス向上のため同期的に実行できるように分離
+ *
+ * @returns Cookieから取得したユーザーID、存在しない場合はnull
+ */
+export function getUserIdFromServerSync(): number | null {
+  const cookieStore = cookies();
   const userIdCookie = cookieStore.get(STORAGE_KEYS.USER_ID);
 
   if (!userIdCookie) return null;

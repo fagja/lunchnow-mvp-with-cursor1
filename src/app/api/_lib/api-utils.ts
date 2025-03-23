@@ -29,7 +29,7 @@ export function createApiResponse<T>(
   if (error) {
     if (typeof error === 'string') {
       errorObj = {
-        code: ERROR_CODES.UNKNOWN_ERROR,
+        code: ERROR_CODES.SYSTEM_ERROR,
         message: error
       };
     } else {
@@ -72,7 +72,7 @@ export function createSuccessResponse<T>(
 export function createErrorResponse<T>(
   errorMessage: string,
   status: number = 400,
-  errorCode: string = ERROR_CODES.UNKNOWN_ERROR
+  errorCode: string = ERROR_CODES.SYSTEM_ERROR
 ): NextResponse<ApiResponse<T>> {
   return createApiResponse<T>({
     error: { code: errorCode, message: errorMessage },
@@ -86,9 +86,9 @@ export function createErrorResponse<T>(
  * @returns バリデーションエラーレスポンス
  */
 export function createValidationErrorResponse<T>(
-  message: string = ERROR_MESSAGES[ERROR_CODES.VALIDATION_ERROR]
+  message: string = ERROR_MESSAGES[ERROR_CODES.USER_INPUT_ERROR]
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(message, 400, ERROR_CODES.VALIDATION_ERROR);
+  return createErrorResponse<T>(message, 400, ERROR_CODES.USER_INPUT_ERROR);
 }
 
 /**
@@ -97,9 +97,9 @@ export function createValidationErrorResponse<T>(
  * @returns 認証エラーレスポンス
  */
 export function createAuthErrorResponse<T>(
-  message: string = ERROR_MESSAGES[ERROR_CODES.UNAUTHORIZED]
+  message: string = ERROR_MESSAGES[ERROR_CODES.AUTH_ERROR]
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(message, 401, ERROR_CODES.UNAUTHORIZED);
+  return createErrorResponse<T>(message, 401, ERROR_CODES.AUTH_ERROR);
 }
 
 /**
@@ -108,9 +108,9 @@ export function createAuthErrorResponse<T>(
  * @returns 権限エラーレスポンス
  */
 export function createForbiddenErrorResponse<T>(
-  message: string = ERROR_MESSAGES[ERROR_CODES.FORBIDDEN_ERROR]
+  message: string = ERROR_MESSAGES[ERROR_CODES.AUTH_ERROR]
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(message, 403, ERROR_CODES.FORBIDDEN_ERROR);
+  return createErrorResponse<T>(message, 403, ERROR_CODES.AUTH_ERROR);
 }
 
 /**
@@ -130,9 +130,9 @@ export function createNotFoundErrorResponse<T>(
  * @returns 競合エラーレスポンス
  */
 export function createConflictErrorResponse<T>(
-  message: string = ERROR_MESSAGES[ERROR_CODES.CONFLICT_ERROR]
+  message: string = ERROR_MESSAGES[ERROR_CODES.RESOURCE_ERROR]
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(message, 409, ERROR_CODES.CONFLICT_ERROR);
+  return createErrorResponse<T>(message, 409, ERROR_CODES.RESOURCE_ERROR);
 }
 
 /**

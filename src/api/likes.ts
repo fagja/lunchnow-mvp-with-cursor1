@@ -32,8 +32,8 @@ export async function createLike(targetUserId: number): Promise<ApiResponse<any>
     console.error('Error creating like:', error);
     return {
       error: {
-        code: ERROR_CODES.SERVER_ERROR,
-        message: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR]
+        code: ERROR_CODES.SYSTEM_ERROR,
+        message: ERROR_MESSAGES[ERROR_CODES.SYSTEM_ERROR]
       },
       status: 500,
       data: undefined
