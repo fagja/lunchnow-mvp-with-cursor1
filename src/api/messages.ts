@@ -1,6 +1,6 @@
 import { SWRResponse } from 'swr';
 import { API_BASE_URL, createNoUserIdError, useSWR } from '@/lib/api';
-import { getUserId } from '@/lib/utils';
+import { getClientUserId } from '@/lib/utils';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
 import { ApiResponse } from '@/types/api.types';
 import { messageConfig } from '@/lib/swr-config';
@@ -16,7 +16,7 @@ import { MessageDTO, MessageHistoryResponse, LatestMessagesResponse } from '@/ty
  * @returns APIレスポンス
  */
 export async function sendMessage(matchId: number, message: string): Promise<ApiResponse<any>> {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) {
     return createNoUserIdError();
   }

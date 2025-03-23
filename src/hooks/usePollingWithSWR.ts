@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { SWRResponse, SWRConfiguration, useSWR } from 'swr';
+import type { SWRResponse, SWRConfiguration } from 'swr';
+import useSWR from 'swr';
 import { usePolling, PollingOptions } from './usePolling';
 
 /**
@@ -56,6 +57,7 @@ export interface PollingWithSWRResponse<T> extends SWRResponse<T> {
 
 /**
  * ポーリングとSWRを組み合わせたカスタムフック
+ * @deprecated この関数は次のマイナーバージョンで削除されます。代わりに useSWRPolling を使用してください
  *
  * SWRの効率的なキャッシュ機能と、ポーリングによるリアルタイム更新を組み合わせ、
  * リソースの効率的な利用と、データの即時性のバランスを取ります。
@@ -106,7 +108,7 @@ export function usePollingWithSWR<T>(
   const [lastPolled, setLastPolled] = useState<Date | null>(null);
 
   // SWR フック
-  const swr = useSWR<T>(key, undefined, swrConfig);
+  const swr = useSWR<T>(key, null, swrConfig);
 
   // ポーリング用の成功コールバック
   const handlePollingSuccess = (data: T) => {

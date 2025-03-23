@@ -75,6 +75,7 @@ export interface PollingResult<T = any> {
 
 /**
  * 定期的なデータ取得を行うポーリング用カスタムフック
+ * @deprecated この関数は次のマイナーバージョンで削除されます。代わりに useSWRPolling を使用してください
  *
  * @param fetcher データ取得関数
  * @param options ポーリングオプション

@@ -285,11 +285,11 @@ export function saveUserId(userId: number): boolean {
 /**
  * クライアントコンポーネント用のユーザーID取得関数
  * Cookieを優先し、次にLocalStorageを使用します。サーバーコンポーネントでは使用できません。
- * サーバーコンポーネントでは代わりに server-utils.ts の getUserId() を使用してください。
+ * サーバーコンポーネントでは代わりに server-utils.ts の getServerUserId() を使用してください。
  *
  * @returns 保存されたユーザーID、存在しない場合または取得に失敗した場合はnull
  */
-export function getUserId(): number | null {
+export function getClientUserId(): number | null {
   if (typeof window === 'undefined') {
     return null; // サーバーサイドでは実行しない
   }
@@ -330,9 +330,24 @@ export function getUserId(): number | null {
     // NaNチェックを追加
     return isNaN(parsedId) ? null : parsedId;
   } catch (error) {
-    console.error('ユーザーIDの取得に失敗しました:', error);
+    // 改善されたエラーログ
+    console.error('クライアント側ユーザーID取得エラー:', {
+      error,
+      context: 'getClientUserId',
+      timestamp: new Date().toISOString()
+    });
     return null;
   }
+}
+
+/**
+ * クライアントコンポーネント用のユーザーID取得関数
+ * @deprecated この関数は次のマイナーバージョンで削除されます。代わりに getClientUserId() を使用してください
+ *
+ * @returns 保存されたユーザーID、存在しない場合または取得に失敗した場合はnull
+ */
+export function getUserId(): number | null {
+  return getClientUserId();
 }
 
 /**
