@@ -10,7 +10,7 @@ import {
   patchApi,
   createUserIdError
 } from './api-client';
-import { getUserId, saveUserId } from '@/lib/utils';
+import { getClientUserId, saveUserId } from '@/lib/utils';
 
 /**
  * APIのベースURL
@@ -52,7 +52,7 @@ export async function registerUser(userData: CreateUserRequest): Promise<UserRes
 export async function fetchUser(userId?: number): Promise<UserResponse> {
   try {
     if (!userId) {
-      const currentUserId = getUserId();
+      const currentUserId = getClientUserId();
 
       if (!currentUserId) {
         return createUserIdError<UserResponse>();
@@ -85,7 +85,7 @@ export async function fetchUsers(
   limit: number = 10
 ): Promise<UsersResponse> {
   try {
-    const userId = getUserId();
+    const userId = getClientUserId();
 
     if (!userId) {
       return createUserIdError<UsersResponse>();
@@ -116,7 +116,7 @@ export async function fetchUsers(
  */
 export async function updateUser(userData: UpdateUserRequest): Promise<UserResponse> {
   try {
-    const userId = getUserId();
+    const userId = getClientUserId();
 
     if (!userId) {
       return createUserIdError<UserResponse>();
@@ -141,7 +141,7 @@ export async function updateUser(userData: UpdateUserRequest): Promise<UserRespo
  */
 export async function fetchCurrentUser(): Promise<UserResponse> {
   try {
-    const userId = getUserId();
+    const userId = getClientUserId();
 
     if (!userId) {
       return {

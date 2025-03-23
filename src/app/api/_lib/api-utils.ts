@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ApiResponse } from '@/types/api.types';
-import { getUserIdFromServer, verifyServerUserId } from '@/lib/auth-utils';
+import { getServerUserIdAsync, verifyServerUserId } from '@/lib/auth-utils';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
 
 /**
@@ -165,7 +165,7 @@ export function logError(context: string, error: any): void {
  * @returns ユーザーIDまたはnull
  */
 export async function authenticateUser(): Promise<number | null> {
-  return await getUserIdFromServer();
+  return await getServerUserIdAsync();
 }
 
 /**

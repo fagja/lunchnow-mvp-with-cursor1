@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { STORAGE_KEYS, CookieOptions } from './constants';
-import { getUserIdFromServer, getUserIdFromServerSync } from './auth-utils';
+import { getServerUserId as getServerUserIdFromAuth, getServerUserIdAsync as getServerUserIdAsyncFromAuth } from './auth-utils';
 
 /**
  * サーバー側でCookieを設定する関数
@@ -52,30 +52,28 @@ export async function removeServerCookie(name: string, path: string = '/'): Prom
 }
 
 /**
- * サーバー側でユーザーIDを取得する関数
- * @deprecated この関数は次のメジャーバージョンで削除されます。代わりに auth-utils.ts の getUserIdFromServer() を使用してください
- * @returns サーバーサイドで取得したユーザーID、存在しない場合はnull
+ * サーバー側非同期コンテキスト用のユーザーID取得関数
+ * API RouteやServerActionsで使用
+ *
+ * @returns サーバーサイドで取得したユーザーID（存在しない場合はnull）
  */
-export async function getServerUserId(): Promise<number | null> {
-  return await getUserIdFromServer();
+export async function getServerUserIdAsync(): Promise<number | null> {
+  return await getServerUserIdAsyncFromAuth();
 }
 
 /**
- * サーバーコンポーネントからユーザーIDを取得する同期関数
+ * サーバーコンポーネント用のユーザーID取得関数
  * サーバーコンポーネント内でのみ使用できます。クライアントコンポーネントでは utils.ts の getClientUserId() を使用してください。
  *
  * @returns サーバーサイドで取得したユーザーID（存在しない場合はnull）
  */
 export function getServerUserId(): number | null {
-  return getUserIdFromServerSync();
+  return getServerUserIdFromAuth();
 }
 
 /**
- * サーバーコンポーネントからユーザーIDを取得する同期関数
- * @deprecated この関数は次のマイナーバージョンで削除されます。代わりに getServerUserId() を使用してください
- *
- * @returns サーバーサイドで取得したユーザーID（存在しない場合はnull）
+ * @deprecated getServerUserIdSync()を使用せず、getServerUserId()を使用してください
  */
-export function getUserId(): number | null {
+export function getServerUserIdSync(): number | null {
   return getServerUserId();
 }

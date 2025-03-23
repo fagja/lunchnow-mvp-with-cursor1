@@ -1,6 +1,6 @@
 import { SWRResponse } from 'swr';
 import { API_BASE_URL, createNoUserIdError, useSWR } from '@/lib/api';
-import { getUserId } from '@/lib/utils';
+import { getClientUserId } from '@/lib/utils';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
 import { ApiResponse } from '@/types/api.types';
 
@@ -10,7 +10,7 @@ import { ApiResponse } from '@/types/api.types';
  * @returns APIレスポンス
  */
 export async function createLike(targetUserId: number): Promise<ApiResponse<any>> {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) {
     return createNoUserIdError();
   }
@@ -45,7 +45,7 @@ export async function createLike(targetUserId: number): Promise<ApiResponse<any>
  * 送信したいいね一覧を取得するSWRキーを生成
  */
 export function getSentLikesKey(page = 1, limit = 10) {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) return null;
   return `/likes/sent?sourceUserId=${userId}&page=${page}&limit=${limit}`;
 }
@@ -61,7 +61,7 @@ export function useSentLikes(page = 1, limit = 10): SWRResponse {
  * 受信したいいね一覧を取得するSWRキーを生成
  */
 export function getReceivedLikesKey(page = 1, limit = 10) {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) return null;
   return `/likes/received?targetUserId=${userId}&page=${page}&limit=${limit}`;
 }
@@ -77,7 +77,7 @@ export function useReceivedLikes(page = 1, limit = 10): SWRResponse {
  * 特定のユーザーへのいいねが存在するか確認するSWRキーを生成
  */
 export function getLikeExistsKey(targetUserId: number) {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) return null;
   return `/likes/exists?sourceUserId=${userId}&targetUserId=${targetUserId}`;
 }

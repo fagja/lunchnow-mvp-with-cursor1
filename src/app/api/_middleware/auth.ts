@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromServer, verifyServerUserId } from '@/lib/auth-utils';
+import { getServerUserIdAsync, verifyServerUserId } from '@/lib/auth-utils';
 import { createAuthErrorResponse, createForbiddenErrorResponse } from '../_lib/api-utils';
 
 /**
@@ -12,7 +12,7 @@ export function withBasicAuth(
   handler: (req: NextRequest, userId: number) => Promise<NextResponse>
 ) {
   return async (request: NextRequest) => {
-    const userId = await getUserIdFromServer();
+    const userId = await getServerUserIdAsync();
 
     if (!userId) {
       return createAuthErrorResponse();

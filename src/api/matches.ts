@@ -1,6 +1,6 @@
 import { SWRResponse } from 'swr';
 import { API_BASE_URL, createNoUserIdError, useSWR } from '@/lib/api';
-import { getUserId } from '@/lib/utils';
+import { getClientUserId } from '@/lib/utils';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants';
 import { ApiResponse } from '@/types/api.types';
 import { matchingConfig } from '@/lib/swr-config';
@@ -12,7 +12,7 @@ import { matchingConfig } from '@/lib/swr-config';
  * @returns APIレスポンス
  */
 export async function createMatch(userId1: number, userId2: number): Promise<ApiResponse<any>> {
-  const currentUserId = getUserId();
+  const currentUserId = getClientUserId();
   if (!currentUserId) {
     return createNoUserIdError();
   }
@@ -47,7 +47,7 @@ export async function createMatch(userId1: number, userId2: number): Promise<Api
  * ユーザーのマッチ一覧を取得するSWRキーを生成
  */
 export function getMatchesKey(page = 1, limit = 10) {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) return null;
   return `/matches?page=${page}&limit=${limit}`;
 }
@@ -65,7 +65,7 @@ export function useMatches(page = 1, limit = 10): SWRResponse {
  * 特定のマッチの詳細を取得するSWRキーを生成
  */
 export function getMatchDetailKey(matchId: number) {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) return null;
   return `/matches/${matchId}`;
 }
@@ -83,7 +83,7 @@ export function useMatchDetail(matchId: number): SWRResponse {
  * ユーザー間のマッチ状態を確認するSWRキーを生成
  */
 export function getMatchStatusKey(otherUserId: number) {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) return null;
   return `/matches/status/${otherUserId}`;
 }
@@ -101,7 +101,7 @@ export function useMatchStatus(otherUserId: number): SWRResponse {
  * マッチを更新するAPI（ステータス変更など）
  */
 export async function updateMatch(matchId: number, updateData: { status?: string }): Promise<ApiResponse<any>> {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) {
     return createNoUserIdError();
   }

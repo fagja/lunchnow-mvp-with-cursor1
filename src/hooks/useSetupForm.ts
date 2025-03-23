@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { generateEndTimeOptions, getUserId, saveUserId } from "@/lib/utils";
+import { generateEndTimeOptions, getClientUserId, saveUserId } from "@/lib/utils";
 import { CreateUserRequest, UpdateUserRequest, ApiError } from "@/types/api.types";
 import { registerUser, fetchUser, updateUser } from "@/api/users";
 
@@ -61,7 +61,7 @@ export function useSetupForm(): UseSetupFormReturn {
   const loadInitialData = async () => {
     try {
       // ローカルストレージからユーザーIDを取得
-      const id = getUserId();
+      const id = getClientUserId();
       setUserId(id);
 
       if (id) {

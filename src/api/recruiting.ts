@@ -1,6 +1,6 @@
 import { SWRResponse, SWRConfiguration } from 'swr';
 import { API_BASE_URL, useSWR, createNoUserIdError } from '@/lib/api';
-import { getUserId } from '@/lib/utils';
+import { getClientUserId } from '@/lib/utils';
 import { ApiResponse } from '@/types/api.types';
 import { userListConfig, profileConfig } from '@/lib/swr-config';
 
@@ -74,7 +74,7 @@ export function useUserProfile(userId: number): SWRResponse {
  * 現在のユーザー自身のプロフィールを取得するSWRキーを生成
  */
 export function getMyProfileKey() {
-  const userId = getUserId();
+  const userId = getClientUserId();
   if (!userId) return null;
   return `/users/me`;
 }

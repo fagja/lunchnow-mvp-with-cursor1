@@ -342,13 +342,11 @@ export function getClientUserId(): number | null {
 
 /**
  * クライアントコンポーネント用のユーザーID取得関数
- * @deprecated この関数は次のマイナーバージョンで削除されます。代わりに getClientUserId() を使用してください
- *
- * @returns 保存されたユーザーID、存在しない場合または取得に失敗した場合はnull
+ * 👉非推奨👈 この関数は将来的に削除されます。代わりに getClientUserId() を使用してください
  */
-export function getUserId(): number | null {
-  return getClientUserId();
-}
+// export function getUserId(): number | null {
+//   return getClientUserId();
+// }
 
 /**
  * 設定をLocalStorageに保存する関数

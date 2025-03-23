@@ -2,7 +2,7 @@
 
 import { SWRResponse, SWRConfiguration } from 'swr';
 import useSWRBase from 'swr';
-import { getUserId } from './utils';
+import { getClientUserId } from './utils';
 import { ERROR_CODES, ERROR_MESSAGES } from './constants';
 import { ApiResponse } from '@/types/api.types';
 
@@ -81,7 +81,7 @@ export function createNoUserIdError<T>(): ApiResponse<T> {
  * GET APIリクエスト関数
  */
 export async function fetchApi<T = any>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
-  const userId = getUserId();
+  const userId = getClientUserId();
 
   // ユーザーIDが必要なAPIの場合はチェック
   if (url.includes('/api/users') || url.includes('/api/matches') || url.includes('/api/likes')) {
@@ -117,7 +117,7 @@ export async function fetchApi<T = any>(url: string, options?: RequestInit): Pro
  * POST APIリクエスト関数
  */
 export async function postApi<T = any>(url: string, data: any, options?: RequestInit): Promise<ApiResponse<T>> {
-  const userId = getUserId();
+  const userId = getClientUserId();
 
   // ユーザーIDが必要なAPIの場合はチェック
   if (url.includes('/api/users') || url.includes('/api/matches') || url.includes('/api/likes')) {
@@ -154,7 +154,7 @@ export async function postApi<T = any>(url: string, data: any, options?: Request
  * PATCH APIリクエスト関数
  */
 export async function patchApi<T = any>(url: string, data: any, options?: RequestInit): Promise<ApiResponse<T>> {
-  const userId = getUserId();
+  const userId = getClientUserId();
 
   // ユーザーIDが必要なAPIの場合はチェック
   if (url.includes('/api/users') || url.includes('/api/matches') || url.includes('/api/likes')) {
@@ -191,7 +191,7 @@ export async function patchApi<T = any>(url: string, data: any, options?: Reques
  * DELETE APIリクエスト関数
  */
 export async function deleteApi<T = any>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
-  const userId = getUserId();
+  const userId = getClientUserId();
 
   // ユーザーIDが必要なAPIの場合はチェック
   if (url.includes('/api/users') || url.includes('/api/matches') || url.includes('/api/likes')) {

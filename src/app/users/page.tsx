@@ -1,14 +1,14 @@
 import { Suspense } from 'react';
 import { UserListClient } from '@/components/shared/users/UserListClient';
 import { Spinner } from '@/components/ui/spinner';
-import { getUserId } from '@/lib/server-utils';
+import { getServerUserId } from '@/lib/server-utils';
 import { getRecruitingUsers } from '@/api/recruiting';
 import { redirect } from 'next/navigation';
 
 // サーバーコンポーネントとしてのユーザー一覧ページ
 export default async function UsersPage() {
   // サーバーサイドでユーザーIDを取得
-  const userId = getUserId();
+  const userId = getServerUserId();
 
   // ユーザーIDがない場合はセットアップページにリダイレクト
   if (!userId) {
