@@ -17,7 +17,7 @@ BEGIN
 
   -- トランザクション開始
   BEGIN
-    -- 相互いいねカウント（日付範囲を広く取る）
+    -- 相互いいねカウント（当日のみに修正）
     SELECT COUNT(*) INTO v_like_count
     FROM public.likes a
     JOIN public.likes b ON a.from_user_id = b.to_user_id AND a.to_user_id = b.from_user_id
@@ -25,10 +25,8 @@ BEGIN
     AND a.to_user_id = p_user_id_2
     AND b.from_user_id = p_user_id_2
     AND b.to_user_id = p_user_id_1
-    AND a.created_at >= (v_today - interval '1 day')
-    AND a.created_at < (v_today + interval '1 day')
-    AND b.created_at >= (v_today - interval '1 day')
-    AND b.created_at < (v_today + interval '1 day');
+    AND DATE(a.created_at) = v_today
+    AND DATE(b.created_at) = v_today;
 
     -- 相互いいねが存在するか確認
     v_mutual_like := v_like_count > 0;
