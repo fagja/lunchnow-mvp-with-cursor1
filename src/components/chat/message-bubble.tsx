@@ -26,16 +26,16 @@ export const MessageBubble = memo(function MessageBubble({ message, isMine }: Me
     >
       <div
         className={cn(
-          'max-w-[75%] rounded-lg p-3 break-words',
+          'max-w-[75%] rounded-2xl px-4 py-2 break-words shadow-sm',
           isMine
-            ? 'bg-primary text-white rounded-br-none'
-            : 'bg-white border border-gray-200 rounded-bl-none'
+            ? 'bg-primary text-primary-foreground rounded-tr-none'
+            : 'bg-muted text-muted-foreground rounded-tl-none'
         )}
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
         <div
           className={cn(
-            'text-xs mt-1',
+            'text-xs mt-1 text-right',
             isMine ? 'text-primary-100' : 'text-gray-500'
           )}
         >

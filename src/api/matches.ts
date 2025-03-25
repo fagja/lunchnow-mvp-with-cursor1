@@ -1,5 +1,5 @@
 import { MatchResponse, MatchesResponse, MatchedUserResponse } from '@/types/api.types';
-import { fetchApi, patchApi } from './api-client';
+import { fetchApi, postApi } from './api-client';
 import { getUserId, validateUserId } from '@/lib/storage-utils';
 
 /**
@@ -41,7 +41,7 @@ export async function cancelMatch(matchId: number): Promise<MatchResponse> {
     return createUserIdError();
   }
 
-  return patchApi<MatchResponse>(`${API_BASE_URL}/${matchId}/cancel`, { userId });
+  return postApi<MatchResponse>(`${API_BASE_URL}/${matchId}/cancel`, { userId });
 }
 
 /**
