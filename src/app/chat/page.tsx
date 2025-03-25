@@ -77,13 +77,7 @@ export default function ChatPage() {
       current: matchInfo?.match_id
     });
 
-    // マッチングが取得できている場合は誤検出の可能性があるので、再確認する
-    if (matchInfo && matchInfo.match_id && (!storedMatchId || Number(storedMatchId) === matchInfo.match_id)) {
-      console.log('キャンセル誤検出の可能性があるため、無視します');
-      return;
-    }
-
-    // 実際にキャンセルされた場合のみモーダル表示
+    // ポーリングがキャンセルを検出した時点で信頼し、モーダルを表示
     setShowCanceledModal(true);
   };
 
