@@ -198,10 +198,8 @@ export default function ChatPage() {
 
   // エンターキーでメッセージを送信
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+    // Enterキーでの送信を削除（要件に従い改行のみに）
+    // ここは空のままにして改行のデフォルト動作を維持
   };
 
   // ローディング中はスピナーを表示
@@ -217,18 +215,18 @@ export default function ChatPage() {
   return (
     <PageContainer className="flex flex-col h-screen pb-0">
       {/* ヘッダー */}
-      <div className="flex justify-between items-center py-4 border-b">
+      <div className="sticky top-0 z-10 flex justify-between items-center py-3 px-4 border-b bg-white">
         <div>
           <h1 className="text-lg font-semibold">
-            {matchInfo?.user?.nickname}さんとチャット
+            {matchInfo?.user?.nickname}
           </h1>
           <p className="text-sm text-gray-500">
-            {matchInfo?.user?.end_time && `〜${matchInfo.user.end_time}`} {matchInfo?.user?.place}
+            {matchInfo?.user?.grade} {matchInfo?.user?.department}
           </p>
         </div>
         <Button
           onClick={handleShowCancelModal}
-          variant="destructive"
+          variant="outline"
           className="text-sm"
         >
           キャンセル
