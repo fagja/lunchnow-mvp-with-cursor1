@@ -307,6 +307,8 @@ export default function ChatPage() {
         onConfirm={handleCancelMatch}
         confirmText="キャンセルする"
         cancelText="戻る"
+        showCancelButton={true}
+        showCloseIcon={true}
       />
 
       {/* キャンセルされたモーダル */}
@@ -317,7 +319,7 @@ export default function ChatPage() {
         description={`${matchInfo?.user?.nickname}さんがランチをキャンセルしました。ユーザー一覧に戻ります。`}
         onConfirm={handleCanceledModalClose}
         confirmText="OK"
-        autoCloseMs={2000}
+        showCloseIcon={false}
       />
     </PageContainer>
   );
