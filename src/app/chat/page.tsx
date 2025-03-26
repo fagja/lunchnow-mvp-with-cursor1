@@ -84,8 +84,8 @@ export default function ChatPage() {
 
   // ポーリングフックを使用
   const { messages, isLoading, error: pollingError } = useChatPolling(
-    matchInfo?.match_id,
-    matchInfo?.match_id,
+    matchInfo?.match_id as (number | null),
+    matchInfo?.match_id as (number | null),
     {
       interval: 3000, // 3秒間隔
       onNewMessages: (newMessages) => {
