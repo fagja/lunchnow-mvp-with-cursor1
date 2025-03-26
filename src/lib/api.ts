@@ -48,7 +48,11 @@ export function useApiGet<T>(
     });
 
     if (response.error) {
-      throw new Error(response.error.message);
+      if (typeof response.error === 'string') {
+        throw new Error(response.error);
+      } else {
+        throw new Error(response.error.message);
+      }
     }
 
     return response.data || null;

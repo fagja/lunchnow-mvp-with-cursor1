@@ -135,7 +135,9 @@ export default function ChatPage() {
       const response = await sendMessage(matchInfo.match_id, content);
 
       if (response.error) {
-        setError(response.error);
+        setError(typeof response.error === 'string'
+          ? response.error
+          : response.error.message || 'エラーが発生しました');
         // エラー時は入力内容を復元
         setInputValue(content);
         return;
@@ -169,7 +171,9 @@ export default function ChatPage() {
       const response = await cancelMatch(matchInfo.match_id);
 
       if (response.error) {
-        setError(response.error);
+        setError(typeof response.error === 'string'
+          ? response.error
+          : response.error.message || 'エラーが発生しました');
         setShowCancelModal(false);
         return;
       }
@@ -231,8 +235,7 @@ export default function ChatPage() {
       {/* エラーメッセージ */}
       {error && (
         <ErrorMessage
-          message={error}
-          className="mt-4"
+          error={error}
           onRetry={() => setError(null)}
         />
       )}
