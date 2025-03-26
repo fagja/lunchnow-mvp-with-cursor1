@@ -245,19 +245,6 @@ export default function ChatPage() {
           </div>
         ) : (
           <>
-            {/* 診断用のログ */}
-            {console.log("[ChatPage] メッセージ一覧データ:", {
-              messages: messages.map(m => ({
-                id: m.id,
-                content: m.content.substring(0, 10) + "...",
-                from_user_id: m.from_user_id
-              })),
-              current_user_id: getUserId(),
-              comparing: messages.map(m => ({
-                message_id: m.id,
-                isMine: m.from_user_id === getUserId()
-              }))
-            })}
             {messages.map((message) => (
               <MessageBubble
                 key={message.id}

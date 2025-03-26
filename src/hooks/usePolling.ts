@@ -28,13 +28,20 @@ export function usePolling<T>(
     onError,
   } = options;
 
-  console.log('[usePolling] 初期化', {
-    interval,
-    immediate,
-    detectVisibility,
-    enabled,
-    maxAttempts
-  });
+  // 初回レンダリングを追跡するref
+  const isFirstRender = useRef(true);
+
+  // 初回レンダリング時のみログを出力
+  if (isFirstRender.current) {
+    console.log('[usePolling] 初期化', {
+      interval,
+      immediate,
+      detectVisibility,
+      enabled,
+      maxAttempts
+    });
+    isFirstRender.current = false;
+  }
 
   // エラーハンドラーの初期化
   const errorHandler = useErrorHandler({
