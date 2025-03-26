@@ -132,11 +132,6 @@ export default function UsersPage() {
       // マッチングモーダルを表示
       safeSetState(setMatchedUser, partnerUser);
       safeSetState(setShowMatchModal, true);
-
-      // 2秒後に自動的にチャット画面に遷移
-      setTimeout(() => {
-        handleMatchModalClose();
-      }, 2000);
     }
   };
 
@@ -250,9 +245,6 @@ export default function UsersPage() {
       const matchedUserData = users.find(user => user.id === userId) || null;
       safeSetState(setMatchedUser, matchedUserData);
       safeSetState(setShowMatchModal, true);
-
-      // 2秒後に自動的にチャット画面に遷移
-      setTimeout(handleMatchModalClose, 2000);
     }
   };
 
@@ -353,7 +345,7 @@ export default function UsersPage() {
         description={matchedUser ? `${matchedUser.nickname}さんとマッチングしました！` : ''}
         onConfirm={handleMatchModalClose}
         confirmText="OK"
-        autoCloseMs={2000}
+        showCloseIcon={false}
       >
         <div className="py-4 text-center">
           <p className="text-lg font-semibold text-primary">

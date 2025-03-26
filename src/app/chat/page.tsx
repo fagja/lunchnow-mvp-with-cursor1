@@ -12,6 +12,7 @@ import { Message, MatchedUser } from '@/types/database.types';
 import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { useChatPolling } from './hooks/useChatPolling';
+import { getUserId } from '@/lib/storage-utils';
 
 // ローディング状態の型定義
 type StatusState = {
@@ -237,19 +238,34 @@ export default function ChatPage() {
       )}
 
       {/* メッセージエリア */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
             メッセージを送信してみましょう
           </div>
         ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isMine={message.from_user_id === matchInfo?.current_user_id}
-            />
-          ))
+          <>
+            {/* 診断用のログ */}
+            {console.log("[ChatPage] メッセージ一覧データ:", {
+              messages: messages.map(m => ({
+                id: m.id,
+                content: m.content.substring(0, 10) + "...",
+                from_user_id: m.from_user_id
+              })),
+              current_user_id: getUserId(),
+              comparing: messages.map(m => ({
+                message_id: m.id,
+                isMine: m.from_user_id === getUserId()
+              }))
+            })}
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                isMine={message.from_user_id === getUserId()}
+              />
+            ))}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -291,6 +307,8 @@ export default function ChatPage() {
         onConfirm={handleCancelMatch}
         confirmText="キャンセルする"
         cancelText="戻る"
+        showCancelButton={true}
+        showCloseIcon={true}
       />
 
       {/* キャンセルされたモーダル */}
@@ -301,7 +319,7 @@ export default function ChatPage() {
         description={`${matchInfo?.user?.nickname}さんがランチをキャンセルしました。ユーザー一覧に戻ります。`}
         onConfirm={handleCanceledModalClose}
         confirmText="OK"
-        autoCloseMs={2000}
+        showCloseIcon={false}
       />
     </PageContainer>
   );

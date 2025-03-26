@@ -17,7 +17,7 @@ export interface ModalProps {
   confirmText?: string;
   onCancel?: () => void;
   onConfirm?: () => void;
-  autoCloseMs?: number;
+  showCloseIcon?: boolean;
 }
 
 /**
@@ -37,13 +37,13 @@ export interface ModalProps {
  *   onConfirm={handleConfirm}
  * />
  *
- * // 通知ダイアログ（自動クローズ）
+ * // 通知ダイアログ
  * <Modal
  *   isOpen={isOpen}
  *   onClose={() => setIsOpen(false)}
  *   title="マッチング成立"
  *   description="チャット画面に移動します"
- *   autoCloseMs={2000}
+ *   showCloseIcon={false}
  * />
  * ```
  */
@@ -60,18 +60,8 @@ export function Modal({
   confirmText = "OK",
   onCancel,
   onConfirm,
-  autoCloseMs,
+  showCloseIcon = true,
 }: ModalProps) {
-  // 自動クローズのタイマー設定
-  React.useEffect(() => {
-    if (isOpen && autoCloseMs) {
-      const timer = setTimeout(() => {
-        onClose();
-      }, autoCloseMs);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, autoCloseMs, onClose]);
-
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -86,54 +76,86 @@ export function Modal({
     onClose();
   };
 
+  // オーバーレイとコンテンツのインラインスタイル定義
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 9998
+  };
+
+  const contentStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    zIndex: 9999,
+    width: '90%',
+    maxWidth: '28rem',
+    borderRadius: '0.5rem',
+    backgroundColor: 'white',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    padding: '1.5rem'
+  };
+
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={onClose}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className="fixed inset-0 bg-black/70"
+          style={overlayStyle}
         />
         <DialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg"
+          className="bg-background p-6 shadow-lg rounded-lg"
+          style={contentStyle}
         >
           {title && (
-            <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+            <div className="flex flex-col space-y-2 text-center">
               <DialogPrimitive.Title
-                className="text-lg font-semibold leading-none tracking-tight"
+                className="text-xl font-semibold leading-none tracking-tight"
               >
                 {title}
               </DialogPrimitive.Title>
               {description && (
                 <DialogPrimitive.Description
-                  className="text-sm text-muted-foreground"
+                  className="text-base text-muted-foreground mt-2"
                 >
                   {description}
                 </DialogPrimitive.Description>
               )}
             </div>
           )}
-          {children}
+
+          {children && <div className="py-2">{children}</div>}
+
           {(showCancelButton || showConfirmButton || footer) && (
-            <div
-              className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2"
-            >
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-center sm:space-x-4 mt-4">
               {footer || (
                 <>
                   {showCancelButton && (
-                    <Button variant="outline" onClick={handleCancel}>
+                    <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto mb-2 sm:mb-0 min-w-[100px]">
                       {cancelText}
                     </Button>
                   )}
                   {showConfirmButton && (
-                    <Button onClick={handleConfirm}>{confirmText}</Button>
+                    <Button onClick={handleConfirm} className="w-full sm:w-auto min-w-[100px]">
+                      {confirmText}
+                    </Button>
                   )}
                 </>
               )}
             </div>
           )}
-          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="h-4 w-4" />
-            <span className="sr-only">閉じる</span>
-          </DialogPrimitive.Close>
+
+          {showCloseIcon && (
+            <DialogPrimitive.Close
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+              style={{ zIndex: 10000 }}
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">閉じる</span>
+            </DialogPrimitive.Close>
+          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
