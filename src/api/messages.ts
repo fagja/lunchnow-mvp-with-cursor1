@@ -1,20 +1,12 @@
 import { Message } from '@/types/database.types';
 import { MessagesResponse, MessageResponse, SendMessageRequest } from '@/types/api.types';
-import { fetchApi, postApi } from './api-client';
+import { fetchApi, postApi, createUserIdError } from './api-client';
 import { getUserId, validateUserId } from '@/lib/storage-utils';
 
 /**
  * APIのベースURL
  */
 const API_BASE_URL = '/api/messages';
-
-/**
- * ユーザーIDが存在しない場合のエラーレスポンスを生成
- */
-const createUserIdError = (): MessageResponse => ({
-  error: 'ユーザーIDが取得できません。再度ログインしてください。',
-  status: 401
-});
 
 /**
  * メッセージ送信関数
@@ -26,7 +18,7 @@ export async function sendMessage(matchId: number, content: string): Promise<Mes
   const fromUserId = getUserId();
 
   if (!fromUserId) {
-    return createUserIdError();
+    return createUserIdError<Message>();
   }
 
   const messageData: SendMessageRequest = {

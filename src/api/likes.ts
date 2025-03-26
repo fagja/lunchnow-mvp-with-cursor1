@@ -1,19 +1,12 @@
-import { LikeResponse, CreateLikeRequest } from '@/types/api.types';
-import { fetchApi, postApi } from './api-client';
+import { LikeResponse, CreateLikeRequest, ApiResponse, LikeWithMatch } from '@/types/api.types';
+import { Like } from '@/types/database.types';
+import { fetchApi, postApi, createUserIdError } from './api-client';
 import { getUserId, validateUserId } from '@/lib/storage-utils';
 
 /**
  * APIのベースURL
  */
 const API_BASE_URL = '/api/likes';
-
-/**
- * ユーザーIDが存在しない場合のエラーレスポンスを生成
- */
-const createUserIdError = (): LikeResponse => ({
-  error: 'ユーザーIDが取得できません。再度ログインしてください。',
-  status: 401
-});
 
 /**
  * いいね送信関数
@@ -24,7 +17,7 @@ export async function createLike(toUserId: number): Promise<LikeResponse> {
   const fromUserId = getUserId();
 
   if (!fromUserId) {
-    return createUserIdError();
+    return createUserIdError<Like | LikeWithMatch>();
   }
 
   const likeData: CreateLikeRequest = {
@@ -32,7 +25,7 @@ export async function createLike(toUserId: number): Promise<LikeResponse> {
     toUserId
   };
 
-  return postApi<LikeResponse>(API_BASE_URL, likeData);
+  return postApi<Like | LikeWithMatch>(API_BASE_URL, likeData);
 }
 
 /**
@@ -43,10 +36,10 @@ export async function fetchSentLikes(): Promise<LikeResponse> {
   const userId = getUserId();
 
   if (!userId) {
-    return createUserIdError();
+    return createUserIdError<Like | LikeWithMatch>();
   }
 
-  return fetchApi<LikeResponse>(`${API_BASE_URL}/sent?userId=${userId}`);
+  return fetchApi<Like | LikeWithMatch>(`${API_BASE_URL}/sent?userId=${userId}`);
 }
 
 /**
@@ -57,8 +50,8 @@ export async function fetchReceivedLikes(): Promise<LikeResponse> {
   const userId = getUserId();
 
   if (!userId) {
-    return createUserIdError();
+    return createUserIdError<Like | LikeWithMatch>();
   }
 
-  return fetchApi<LikeResponse>(`${API_BASE_URL}/received?userId=${userId}`);
+  return fetchApi<Like | LikeWithMatch>(`${API_BASE_URL}/received?userId=${userId}`);
 }

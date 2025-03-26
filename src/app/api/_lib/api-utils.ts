@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ApiResponse } from '@/types/api.types';
+import { ApiResponse, ApiError, ApiErrorCode } from '@/types/api.types';
 
 /**
  * APIレスポンスを作成するヘルパー関数
@@ -7,7 +7,7 @@ import { ApiResponse } from '@/types/api.types';
 export function createApiResponse<T>(
   data: T | undefined,
   status: number,
-  error?: { code: string; message: string },
+  error?: ApiError | string,
   headers?: Headers
 ): NextResponse {
   const response: ApiResponse<T> = {
@@ -26,18 +26,23 @@ export function createApiResponse<T>(
  * API成功レスポンス生成関数
  * @param data レスポンスデータ
  * @param status HTTPステータスコード
+ * @param headers レスポンスヘッダー
  * @returns APIレスポンス
  */
 export function createSuccessResponse<T>(
   data: T,
-  status: number = 200
+  status: number = 200,
+  headers?: Headers
 ): NextResponse<ApiResponse<T>> {
   return NextResponse.json(
     {
       data,
       status
     },
-    { status }
+    {
+      status,
+      headers
+    }
   );
 }
 
@@ -51,13 +56,17 @@ export function createSuccessResponse<T>(
 export function createErrorResponse<T>(
   error: string,
   status: number = 400,
-  errorCode?: string
+  errorCode?: ApiErrorCode
 ): NextResponse<ApiResponse<T>> {
+  // エラーコードが指定されている場合はApiErrorオブジェクトを作成
+  const errorObject = errorCode
+    ? { code: errorCode, message: error } as ApiError
+    : error;
+
   return NextResponse.json(
     {
-      error,
-      status,
-      errorCode
+      error: errorObject,
+      status
     },
     { status }
   );
@@ -71,7 +80,7 @@ export function createErrorResponse<T>(
 export function createValidationErrorResponse<T>(
   error: string
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(error, 400, 'VALIDATION_ERROR');
+  return createErrorResponse<T>(error, 400, 'validation_error');
 }
 
 /**
@@ -82,7 +91,7 @@ export function createValidationErrorResponse<T>(
 export function createAuthErrorResponse<T>(
   error: string = '認証に失敗しました。再度ログインしてください。'
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(error, 401, 'AUTH_ERROR');
+  return createErrorResponse<T>(error, 401, 'unauthorized_error');
 }
 
 /**
@@ -93,7 +102,7 @@ export function createAuthErrorResponse<T>(
 export function createForbiddenErrorResponse<T>(
   error: string = 'この操作を行う権限がありません。'
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(error, 403, 'FORBIDDEN_ERROR');
+  return createErrorResponse<T>(error, 403, 'forbidden_error');
 }
 
 /**
@@ -104,7 +113,7 @@ export function createForbiddenErrorResponse<T>(
 export function createNotFoundErrorResponse<T>(
   error: string = '指定されたリソースが見つかりません。'
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(error, 404, 'NOT_FOUND_ERROR');
+  return createErrorResponse<T>(error, 404, 'not_found');
 }
 
 /**
@@ -115,7 +124,7 @@ export function createNotFoundErrorResponse<T>(
 export function createConflictErrorResponse<T>(
   error: string = 'リソースが既に存在しています。'
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(error, 409, 'CONFLICT_ERROR');
+  return createErrorResponse<T>(error, 409, 'conflict_error');
 }
 
 /**
@@ -126,13 +135,13 @@ export function createConflictErrorResponse<T>(
 export function createServerErrorResponse<T>(
   error: string = 'サーバーエラーが発生しました。しばらく経ってからお試しください。'
 ): NextResponse<ApiResponse<T>> {
-  return createErrorResponse<T>(error, 500, 'SERVER_ERROR');
+  return createErrorResponse<T>(error, 500, 'general_error');
 }
 
 /**
  * 不正なIDパラメータのチェック
  */
-export function isValidId(id: string | null | undefined): boolean {
+export function isValidId(id: string | null | undefined): id is string {
   return !!id && !isNaN(Number(id));
 }
 
