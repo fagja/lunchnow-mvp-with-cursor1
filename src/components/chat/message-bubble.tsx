@@ -17,23 +17,6 @@ export const MessageBubble = memo(function MessageBubble({ message, isMine }: Me
   // メッセージの送信時刻をフォーマット
   const formattedTime = formatTime(message.created_at);
 
-  // 診断用：isMineの値とメッセージ内容をログに出力
-  useEffect(() => {
-    console.log(`[MessageBubble] メッセージ: "${message.content.substring(0, 15)}..." isMine:`, isMine);
-    console.log(`[MessageBubble] クラス適用:`, {
-      containerClass: cn(
-        'flex w-full mb-2',
-        isMine ? 'justify-end' : 'justify-start'
-      ),
-      bubbleClass: cn(
-        'max-w-[70%] rounded-lg px-4 py-2 break-words',
-        isMine
-          ? 'bg-blue-500 text-white ml-auto rounded-br-none'
-          : 'bg-gray-100 text-gray-900 mr-auto rounded-bl-none'
-      )
-    });
-  }, [message.id, isMine]);
-
   // コンテナのスタイル
   const containerStyle = {
     display: 'flex',
