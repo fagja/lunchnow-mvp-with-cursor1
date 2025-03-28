@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, ApiError, ApiErrorCode } from '@/types/api.types';
 
 /**
@@ -150,4 +150,12 @@ export function isValidId(id: string | null | undefined): id is string {
  */
 export function logError(context: string, error: any): void {
   console.error(`[API Error] ${context}:`, error);
+}
+
+/**
+ * クエリパラメータを安全に取得するユーティリティ関数
+ * 静的生成と互換性があるため、request.url代わりに使用
+ */
+export function getQueryParam(request: NextRequest, param: string): string | null {
+  return request.nextUrl.searchParams.get(param);
 }
