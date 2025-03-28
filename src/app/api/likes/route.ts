@@ -6,8 +6,12 @@ import {
   createErrorResponse,
   createValidationErrorResponse,
   isValidId,
-  logError
+  logError,
+  getQueryParam
 } from '../_lib/api-utils';
+
+// このAPIルートを動的に設定
+export const dynamic = 'force-dynamic';
 
 /**
  * いいね登録処理
@@ -83,10 +87,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url);
-    const fromUserId = url.searchParams.get('fromUserId');
-    const toUserId = url.searchParams.get('toUserId');
-    const dateParam = url.searchParams.get('date') || new Date().toISOString().split('T')[0]; // 指定がなければ今日の日付
+    const fromUserId = getQueryParam(request, 'fromUserId');
+    const toUserId = getQueryParam(request, 'toUserId');
+    const dateParam = getQueryParam(request, 'date') || new Date().toISOString().split('T')[0]; // 指定がなければ今日の日付
 
     // パラメータ検証（fromUserIdかtoUserIdのどちらかは必須）
     if ((!isValidId(fromUserId) && !isValidId(toUserId)) || !dateParam) {

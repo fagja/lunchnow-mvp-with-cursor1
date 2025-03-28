@@ -6,8 +6,12 @@ import {
   createErrorResponse,
   createValidationErrorResponse,
   isValidId,
-  logError
+  logError,
+  getQueryParam
 } from '../../_lib/api-utils';
+
+// このAPIルートを動的に設定
+export const dynamic = 'force-dynamic';
 
 /**
  * 現在のマッチングユーザー情報を取得するAPI
@@ -15,8 +19,7 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
+    const userId = getQueryParam(request, 'userId');
 
     // パラメータ検証
     if (!isValidId(userId)) {

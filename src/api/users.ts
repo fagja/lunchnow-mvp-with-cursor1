@@ -4,6 +4,7 @@ import {
   UserResponse,
   UsersResponse
 } from '@/types/api.types';
+import { User } from '@/types/database.types';
 import {
   fetchApi,
   postApi,
@@ -23,10 +24,11 @@ const API_BASE_URL = '/api/users';
  * @returns 登録結果
  */
 export async function registerUser(userData: UpdateUserRequest): Promise<UserResponse> {
-  const response = await postApi<UserResponse>(API_BASE_URL, userData);
+  const response = await postApi<User>(API_BASE_URL, userData);
 
-  if (response.data && response.data.id) {
-    saveUserId(response.data.id);
+  const userId = response.data?.id;
+  if (userId) {
+    saveUserId(userId);
   }
 
   return response;
@@ -42,13 +44,13 @@ export async function fetchUser(userId?: number): Promise<UserResponse> {
     const currentUserId = getUserId();
 
     if (!currentUserId) {
-      return createUserIdError<UserResponse>();
+      return createUserIdError<User>();
     }
 
     userId = currentUserId;
   }
 
-  return fetchApi<UserResponse>(`${API_BASE_URL}/${userId}`);
+  return fetchApi<User>(`${API_BASE_URL}/${userId}`);
 }
 
 /**
@@ -64,7 +66,7 @@ export async function fetchUsers(
   const userId = getUserId();
 
   if (!userId) {
-    return createUserIdError<UsersResponse>();
+    return createUserIdError<User[]>();
   }
 
   const queryParams = new URLSearchParams({
@@ -72,7 +74,7 @@ export async function fetchUsers(
     limit: limit.toString()
   });
 
-  return fetchApi<UsersResponse>(`${API_BASE_URL}?${queryParams.toString()}`);
+  return fetchApi<User[]>(`${API_BASE_URL}?${queryParams.toString()}`);
 }
 
 /**
@@ -84,10 +86,10 @@ export async function updateUser(userData: UpdateUserRequest): Promise<UserRespo
   const userId = getUserId();
 
   if (!userId) {
-    return createUserIdError<UserResponse>();
+    return createUserIdError<User>();
   }
 
-  return patchApi<UserResponse>(`${API_BASE_URL}/${userId}`, userData);
+  return patchApi<User>(`${API_BASE_URL}/${userId}`, userData);
 }
 
 /**
@@ -98,10 +100,7 @@ export async function fetchCurrentUser(): Promise<UserResponse> {
   const userId = getUserId();
 
   if (!userId) {
-    return {
-      error: 'エラーが発生しました',
-      status: 404
-    };
+    return createUserIdError<User>();
   }
 
   return fetchUser(userId);

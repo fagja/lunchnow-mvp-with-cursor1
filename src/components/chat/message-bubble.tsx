@@ -30,7 +30,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isMine }: Me
     maxWidth: '70%',
     borderRadius: '8px',
     padding: '8px 16px',
-    wordBreak: 'break-word',
+    overflowWrap: 'break-word' as any,
     backgroundColor: isMine ? '#3b82f6' : '#f3f4f6', // blue-500 or gray-100
     color: isMine ? 'white' : '#1f2937', // white or gray-900
     marginLeft: isMine ? 'auto' : '0',

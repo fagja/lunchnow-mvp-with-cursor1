@@ -6,9 +6,13 @@ import {
   createErrorResponse,
   createValidationErrorResponse,
   isValidId,
-  logError
+  logError,
+  getQueryParam
 } from '../../_lib/api-utils';
 import { RECRUITING_EXPIRY_MINUTES } from '@/constants/app-settings';
+
+// このAPIルートを動的に設定
+export const dynamic = 'force-dynamic';
 
 /**
  * 募集中ユーザー一覧取得API
@@ -22,8 +26,7 @@ import { RECRUITING_EXPIRY_MINUTES } from '@/constants/app-settings';
 export async function GET(request: NextRequest) {
   try {
     // クエリパラメータからcurrentUserIdを取得
-    const url = new URL(request.url);
-    const currentUserId = url.searchParams.get('currentUserId');
+    const currentUserId = getQueryParam(request, 'currentUserId');
 
     if (!isValidId(currentUserId)) {
       return createValidationErrorResponse<RecruitingUser[]>('パラメータエラー');

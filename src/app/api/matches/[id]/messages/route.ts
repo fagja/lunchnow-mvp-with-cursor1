@@ -7,9 +7,13 @@ import {
   createValidationErrorResponse,
   createNotFoundErrorResponse,
   isValidId,
-  logError
+  logError,
+  getQueryParam
 } from '../../../_lib/api-utils';
 import { validateMessageContent } from '@/lib/validation';
+
+// このAPIルートを動的に設定
+export const dynamic = 'force-dynamic';
 
 /**
  * メッセージ送信API
@@ -93,11 +97,10 @@ export async function GET(
 ) {
   try {
     const matchId = params.id;
-    const url = new URL(request.url);
 
     // ページネーションパラメータの取得
-    const limit = Number(url.searchParams.get('limit') || '50');
-    const page = Number(url.searchParams.get('page') || '1');
+    const limit = Number(getQueryParam(request, 'limit') || '50');
+    const page = Number(getQueryParam(request, 'page') || '1');
     const offset = (page - 1) * limit;
 
     // パラメータ検証

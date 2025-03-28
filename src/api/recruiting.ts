@@ -1,6 +1,7 @@
 import { RecruitingUsersResponse } from '@/types/api.types';
 import { fetchApi, createUserIdError } from './api-client';
 import { getUserId, validateUserId } from '@/lib/storage-utils';
+import { RecruitingUser } from '@/types/database.types';
 
 /**
  * APIのベースURL
@@ -22,7 +23,7 @@ async function fetchRecruitingUsersBase(
   const currentUserId = getUserId();
 
   if (!currentUserId) {
-    return createUserIdError();
+    return createUserIdError<RecruitingUser[]>();
   }
 
   // URLが指定されている場合はそのまま使用、ない場合は生成
@@ -74,7 +75,7 @@ export async function fetchRecentRecruitingUsers(
   const currentUserId = getUserId();
 
   if (!currentUserId) {
-    return createUserIdError();
+    return createUserIdError<RecruitingUser[]>();
   }
 
   return fetchRecruitingUsersBase(
