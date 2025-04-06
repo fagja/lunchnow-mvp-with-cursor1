@@ -44,7 +44,7 @@ export function UserCard({ user, onLike, disabled = false }: UserCardProps) {
           variant={user.liked_by_me ? "secondary" : "default"}
           className={`w-full transition-colors ${user.liked_by_me ? 'bg-green-100 hover:bg-green-200 text-green-700' : ''}`}
         >
-          {user.liked_by_me ? '✓ リクエスト済み' : 'とりまランチ？'}
+          {user.liked_by_me ? '✓ いいね済み' : 'いいね！'}
         </Button>
       </CardFooter>
     </Card>
