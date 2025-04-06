@@ -11,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LunchNow - 慶應日吉キャンパスのランチマッチングアプリ",
-  description: "慶應大学日吉キャンパスで「今すぐランチ」をする相手を即座に見つけ、最小限の設定でシームレスにマッチングできるアプリ",
+  title: "LunchNow - 慶應日吉キャンパスのランチアプリ",
+  description: "慶應日吉キャンパスで、ランチ相手を”その場で”見つける",
 };
 
 export default function RootLayout({
