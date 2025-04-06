@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { PageContainer } from "@/components/layout/page-container";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,6 +25,7 @@ export default function RootLayout({
         <PageContainer>
           {children}
         </PageContainer>
+        <SpeedInsights />
       </body>
     </html>
   );
