@@ -311,47 +311,102 @@ export default function UsersPage() {
               e.stopPropagation();
               handleEditProfile();
             }}
-            className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.875rem',
+              backgroundColor: 'white',
+              border: '1px solid #d1d5db',
+              borderRadius: '0.375rem',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#f9fafb';
+            }}
+            onMouseOut={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'white';
+            }}
           >
             プロフィール編集
           </button>
 
           <div className="text-center">
-            <p className="text-xs text-gray-500">
+            <p style={{
+              fontSize: '0.75rem',
+              color: '#6b7280',
+              marginBottom: '2px'
+            }}>
               募集状態は{RECRUITING_EXPIRY_MINUTES}分間有効です
             </p>
-            <p className="text-xs text-gray-400" style={{ fontSize: '0.65rem' }}>
+            <p style={{
+              fontSize: '0.65rem',
+              color: '#9ca3af'
+            }}>
               {RECRUITING_EXPIRY_MINUTES}分経過した場合、再度ランチ設定画面に戻り、再設定してください
             </p>
           </div>
 
-          <button
-            onClick={loadUsers}
-            disabled={loading}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-600 disabled:opacity-50"
-          >
-            {loading ? '更新中...' : '更新'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {lastUpdated && (
+              <p style={{
+                fontSize: '0.75rem',
+                color: '#6b7280',
+                margin: '0'
+              }}>
+                最終更新: {lastUpdated}
+              </p>
+            )}
+            <button
+              onClick={loadUsers}
+              disabled={loading}
+              style={{
+                padding: '8px 16px',
+                fontSize: '0.875rem',
+                backgroundColor: loading ? '#818cf8' : '#4f46e5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: loading ? 'default' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                transition: 'background-color 0.2s, opacity 0.2s'
+              }}
+              onMouseOver={(e) => {
+                if (!loading) {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#4338ca';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!loading) {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#4f46e5';
+                }
+              }}
+            >
+              {loading ? '更新中...' : '更新'}
+            </button>
+          </div>
         </div>
-
-        {/* 最終更新時刻 */}
-        {lastUpdated && (
-          <p className="text-xs text-gray-500 text-right mb-4">
-            最終更新: {lastUpdated}
-          </p>
-        )}
 
         {/* エラーメッセージ */}
         <ErrorMessage error={error} />
 
         {/* ユーザー一覧 */}
         {loading && users.length === 0 ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '16rem'
+          }}>
+            <div style={{
+              height: '3rem',
+              width: '3rem',
+              borderRadius: '9999px',
+              borderBottom: '2px solid #4f46e5',
+              animation: 'spin 1s linear infinite'
+            }}></div>
           </div>
         ) : users.length > 0 ? (
           <div
-            className="grid gap-4"
             style={{
               display: 'grid',
               gridTemplateColumns: gridCols,
@@ -369,8 +424,15 @@ export default function UsersPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
-            <p className="text-gray-600">
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '0.5rem',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e5e7eb',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#4b5563' }}>
               現在募集中のユーザーはいません。また後で確認してください。
             </p>
           </div>
