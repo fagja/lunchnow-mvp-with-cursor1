@@ -75,8 +75,6 @@ export function SetupPageContent() {
   return (
     <PageContainer>
       <div className="w-full max-w-md mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-6 text-center">ランチ設定</h1>
-
         <ErrorMessage error={displayError} />
 
         <ProfileForm

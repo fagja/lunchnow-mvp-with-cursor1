@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { User } from '@/types/database.types';
 import { ProfileFormProps } from '@/types/component.types';
 import { Button } from '@/components/ui/button';
@@ -58,10 +59,10 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* プロフィール入力エリア */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold text-lg mb-4">プロフィール</h2>
+        <h2 className="font-semibold text-lg mb-4">👤 あなたの情報</h2>
 
         {/* ニックネーム */}
-        <div className="mb-4">
+        <div className="mb-4 pb-4 border-b border-gray-100">
           <label htmlFor="nickname" className="block text-sm font-medium mb-1">
             ニックネーム <span className="text-red-500">*</span>
           </label>
@@ -79,7 +80,7 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
         </div>
 
         {/* 学年 */}
-        <div className="mb-4">
+        <div className="mb-4 pb-4 border-b border-gray-100">
           <label htmlFor="grade" className="block text-sm font-medium mb-1">
             学年 <span className="text-red-500">*</span>
           </label>
@@ -101,7 +102,7 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
         </div>
 
         {/* 学部 */}
-        <div className="mb-4">
+        <div>
           <label htmlFor="department" className="block text-sm font-medium mb-1">
             学部 <span className="text-red-500">*</span>
           </label>
@@ -123,14 +124,17 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
         </div>
       </div>
 
+      {/* セクション間の区切り（非表示の空白） */}
+      <div style={{ margin: '20px 0', borderBottom: '1px solid #eaeaea' }}></div>
+
       {/* ステータス入力エリア */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold text-lg mb-4">ステータス</h2>
+        <h2 className="font-semibold text-lg mb-4">🍴 ランチの予定</h2>
 
         {/* 空き時間 */}
-        <div className="mb-4">
+        <div className="mb-4 pb-4 border-b border-gray-100">
           <label htmlFor="end_time" className="block text-sm font-medium mb-1">
-            空き時間（いつまで空いているか）
+            いつまで空いているか
           </label>
           <select
             id="end_time"
@@ -149,7 +153,7 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
         </div>
 
         {/* 場所 */}
-        <div className="mb-4">
+        <div>
           <label htmlFor="place" className="block text-sm font-medium mb-1">
             食べたい場所
           </label>
@@ -170,8 +174,27 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
         </div>
       </div>
 
+      {/* 利用規約とプライバシーポリシーへのリンク部分 - 上部に細い区切り線を追加 */}
+      <div style={{ paddingTop: '16px', marginTop: '16px', borderTop: '1px solid #eaeaea' }}>
+        <div style={{ fontSize: '11px', color: '#666', paddingLeft: '10px' }}>
+          <p style={{ marginBottom: '4px' }}>
+            「同意して始める」を押すことで、
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Link href="/terms" style={{ color: '#4a86e8', textDecoration: 'underline' }} target="_blank">
+              利用規約
+            </Link>
+            <span style={{ margin: '0 4px' }}>・</span>
+            <Link href="/privacy" style={{ color: '#4a86e8', textDecoration: 'underline' }} target="_blank">
+              プライバシーポリシー
+            </Link>
+          </div>
+          <p style={{ marginTop: '4px' }}>に同意したものとみなします。</p>
+        </div>
+      </div>
+
       {/* 送信ボタン */}
-      <div className="flex justify-center">
+      <div className="flex justify-center mt-4">
         <Button
           type="submit"
           disabled={isLoading}
@@ -179,7 +202,7 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
           loadingText="保存中..."
           className="w-full max-w-xs"
         >
-          OK
+          {isEditMode ? 'OK' : '同意して始める'}
         </Button>
       </div>
     </form>
