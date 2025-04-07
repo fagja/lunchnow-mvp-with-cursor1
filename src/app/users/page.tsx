@@ -24,6 +24,38 @@ export default function UsersPage() {
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUser, setMatchedUser] = useState<RecruitingUser | null>(null);
   const isMountedRef = useRef(true);
+  const [gridCols, setGridCols] = useState('repeat(2, minmax(0, 1fr))');
+
+  // ウィンドウサイズの変更を監視して列数を調整
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        // スマートフォン
+        setGridCols('repeat(2, minmax(0, 1fr))');
+      } else if (width < 768) {
+        // sm
+        setGridCols('repeat(3, minmax(0, 1fr))');
+      } else if (width < 1024) {
+        // md
+        setGridCols('repeat(4, minmax(0, 1fr))');
+      } else {
+        // lg以上
+        setGridCols('repeat(5, minmax(0, 1fr))');
+      }
+    };
+
+    // 初期設定
+    handleResize();
+
+    // リサイズイベントリスナーを追加
+    window.addEventListener('resize', handleResize);
+
+    // クリーンアップ
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // マウント状態を確認して状態を安全に更新する関数
   const safeSetState = (setter: any, value: any) => {
@@ -318,7 +350,15 @@ export default function UsersPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         ) : users.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div
+            className="grid gap-4"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: gridCols,
+              gap: '1rem',
+              width: '100%'
+            }}
+          >
             {users.map(user => (
               <UserCard
                 key={user.id}
