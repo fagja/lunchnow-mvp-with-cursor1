@@ -214,36 +214,183 @@ export default function ChatPage() {
   return (
     <PageContainer className="flex flex-col h-screen pb-0">
       {/* ヘッダー */}
-      <div className="sticky top-0 z-10 flex justify-between items-center py-3 px-4 border-b bg-white">
-        <div>
-          <h1 className="text-lg font-semibold">
-            {matchInfo?.user?.nickname}
-          </h1>
-          <p className="text-sm text-gray-500">
-            {matchInfo?.user?.grade} {matchInfo?.user?.department}
-          </p>
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '14px 16px',
+          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: 'white',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+          borderTopLeftRadius: '8px',
+          borderTopRightRadius: '8px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: '#4f46e5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            {matchInfo?.user?.nickname?.charAt(0)}
+          </div>
+          <div>
+            <h1
+              style={{
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#111827',
+                marginBottom: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              {matchInfo?.user?.nickname}
+              <span
+                style={{
+                  fontSize: '0.85rem',
+                  color: '#4b5563',
+                  fontWeight: 'normal',
+                }}
+              >
+                （{matchInfo?.user?.department}・{matchInfo?.user?.grade}）
+              </span>
+            </h1>
+            <p
+              style={{
+                fontSize: '0.75rem',
+                color: '#6b7280',
+                margin: 0,
+              }}
+            >
+              {matchInfo?.user?.end_time && `空き時間: ${matchInfo?.user?.end_time}`}
+              {matchInfo?.user?.place && ` / 場所: ${matchInfo?.user?.place}`}
+            </p>
+          </div>
         </div>
-        <Button
+        <button
           onClick={handleShowCancelModal}
-          variant="outline"
-          className="text-sm"
+          style={{
+            padding: '6px 12px',
+            borderRadius: '6px',
+            backgroundColor: '#fee2e2',
+            color: '#b91c1c',
+            fontSize: '0.75rem',
+            border: '1px solid #fecaca',
+            cursor: 'pointer',
+            fontWeight: '500',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+          onMouseOver={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#fecaca';
+          }}
+          onMouseOut={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#fee2e2';
+          }}
         >
-          キャンセル
-        </Button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ marginRight: '2px' }}
+          >
+            <path d="M18 6L6 18M6 6l12 12"></path>
+          </svg>
+          マッチキャンセル
+        </button>
       </div>
+
+      {/* 区切り線 */}
+      <div
+        style={{
+          height: '2px',
+          background: 'linear-gradient(to right, rgba(79, 70, 229, 0.2), rgba(79, 70, 229, 0.6), rgba(79, 70, 229, 0.2))',
+          margin: '0 10px',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+        }}
+      ></div>
 
       {/* エラーメッセージ */}
       {error && (
-        <ErrorMessage
-          error={error}
-          onRetry={() => setError(null)}
-        />
+        <div
+          style={{
+            padding: '12px 16px',
+            backgroundColor: '#fee2e2',
+            color: '#b91c1c',
+            margin: '10px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.875rem'
+          }}
+        >
+          <p style={{ margin: 0 }}>{error}</p>
+          <button
+            onClick={() => setError(null)}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#b91c1c',
+              padding: '4px',
+              borderRadius: '4px'
+            }}
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       {/* メッセージエリア */}
-      <div className="flex-1 overflow-y-auto p-4" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          backgroundColor: '#f9fafb',
+          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.8) 2px, transparent 2px), linear-gradient(90deg, rgba(255, 255, 255, 0.8) 2px, transparent 2px)',
+          backgroundSize: '30px 30px',
+          backgroundPosition: '-2px -2px',
+        }}
+      >
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
+          <div
+            style={{
+              textAlign: 'center',
+              color: '#6b7280',
+              padding: '40px 0',
+              fontSize: '0.9rem',
+              fontStyle: 'italic',
+            }}
+          >
             メッセージを送信してみましょう
           </div>
         ) : (
@@ -261,30 +408,117 @@ export default function ChatPage() {
       </div>
 
       {/* 入力エリア */}
-      <div className="border-t p-4 bg-white">
-        <div className="flex space-x-2">
+      <div
+        style={{
+          borderTop: '1px solid #e5e7eb',
+          padding: '12px 16px',
+          backgroundColor: 'white',
+          boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.03)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            position: 'relative',
+          }}
+        >
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="メッセージを入力..."
             maxLength={200}
-            className="flex-1 min-h-[60px] p-2 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+            style={{
+              flex: 1,
+              minHeight: '50px',
+              maxHeight: '120px',
+              padding: '12px',
+              borderRadius: '20px',
+              border: '1px solid #d1d5db',
+              resize: 'none',
+              fontSize: '0.9rem',
+              lineHeight: '1.4',
+              boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
+              outline: 'none',
+              transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+            }}
+            onFocus={(e) => {
+              (e.target as HTMLTextAreaElement).style.borderColor = '#4f46e5';
+              (e.target as HTMLTextAreaElement).style.boxShadow = 'inset 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 2px rgba(79, 70, 229, 0.1)';
+            }}
+            onBlur={(e) => {
+              (e.target as HTMLTextAreaElement).style.borderColor = '#d1d5db';
+              (e.target as HTMLTextAreaElement).style.boxShadow = 'inset 0 1px 2px rgba(0, 0, 0, 0.05)';
+            }}
           />
-          <Button
+          <button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || status.isSending}
-            className="self-end"
+            style={{
+              alignSelf: 'flex-end',
+              backgroundColor: status.isSending || !inputValue.trim() ? '#818cf8' : '#4f46e5',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '46px',
+              height: '46px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: status.isSending || !inputValue.trim() ? 'default' : 'pointer',
+              opacity: status.isSending || !inputValue.trim() ? 0.7 : 1,
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+            }}
+            onMouseOver={(e) => {
+              if (!status.isSending && inputValue.trim()) {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#4338ca';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!status.isSending && inputValue.trim()) {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#4f46e5';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+              }
+            }}
           >
             {status.isSending ? (
-              <span className="flex items-center">
-                <span className="animate-spin h-4 w-4 mr-2 border-b-2 border-white rounded-full"></span>
-                送信中...
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <span
+                  style={{
+                    height: '16px',
+                    width: '16px',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }}
+                ></span>
               </span>
             ) : (
-              '送信'
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
+              </svg>
             )}
-          </Button>
+          </button>
         </div>
       </div>
 
