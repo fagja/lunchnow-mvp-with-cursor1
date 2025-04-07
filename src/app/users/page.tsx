@@ -285,10 +285,10 @@ export default function UsersPage() {
           </button>
 
           <div className="text-center">
-            <p className="text-sm text-gray-500">
+            <p className="text-xs text-gray-500">
               募集状態は{RECRUITING_EXPIRY_MINUTES}分間有効です
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400" style={{ fontSize: '0.65rem' }}>
               {RECRUITING_EXPIRY_MINUTES}分経過した場合、再度ランチ設定画面に戻り、再設定してください
             </p>
           </div>

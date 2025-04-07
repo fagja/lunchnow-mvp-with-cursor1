@@ -5,7 +5,10 @@ import { UserCardProps } from '@/types/component.types';
 
 export function UserCard({ user, onLike, disabled = false }: UserCardProps) {
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <Card
+      className="overflow-hidden hover:shadow-md transition-shadow duration-200"
+      style={{ border: '1px solid rgba(0, 0, 0, 0.12)', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)' }}
+    >
       <CardContent className="p-6">
         <div className="flex flex-col">
           {/* ニックネーム */}
