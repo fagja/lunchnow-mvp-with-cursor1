@@ -231,23 +231,6 @@ export default function ChatPage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor: '#4f46e5',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '16px',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            {matchInfo?.user?.nickname?.charAt(0)}
-          </div>
           <div>
             <h1
               style={{
@@ -271,26 +254,16 @@ export default function ChatPage() {
                 （{matchInfo?.user?.department}・{matchInfo?.user?.grade}）
               </span>
             </h1>
-            <p
-              style={{
-                fontSize: '0.75rem',
-                color: '#6b7280',
-                margin: 0,
-              }}
-            >
-              {matchInfo?.user?.end_time && `空き時間: ${matchInfo?.user?.end_time}`}
-              {matchInfo?.user?.place && ` / 場所: ${matchInfo?.user?.place}`}
-            </p>
           </div>
         </div>
         <button
           onClick={handleShowCancelModal}
           style={{
-            padding: '6px 12px',
+            padding: '4px 10px',
             borderRadius: '6px',
             backgroundColor: '#fee2e2',
             color: '#b91c1c',
-            fontSize: '0.75rem',
+            fontSize: '0.7rem',
             border: '1px solid #fecaca',
             cursor: 'pointer',
             fontWeight: '500',
@@ -308,8 +281,8 @@ export default function ChatPage() {
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
+            width="12"
+            height="12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -376,9 +349,6 @@ export default function ChatPage() {
           flexDirection: 'column',
           gap: '8px',
           backgroundColor: '#f9fafb',
-          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.8) 2px, transparent 2px), linear-gradient(90deg, rgba(255, 255, 255, 0.8) 2px, transparent 2px)',
-          backgroundSize: '30px 30px',
-          backgroundPosition: '-2px -2px',
         }}
       >
         {messages.length === 0 ? (
