@@ -7,6 +7,7 @@
  */
 export const localStorageKeys = {
   USER_ID: 'lunchnow_user_id',
+  LIKED_USERS: 'lunchnow_liked_users',
 }
 
 /**
@@ -44,4 +45,47 @@ export function validateUserId(): number | null {
     console.error('ユーザーIDが存在しません。');
   }
   return userId;
+}
+
+/**
+ * いいねしたユーザーのIDリストをLocalStorageから取得する
+ * @returns いいねしたユーザーIDの配列
+ */
+export function getLikedUserIds(): number[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  const likedUsersJson = localStorage.getItem(localStorageKeys.LIKED_USERS);
+  return likedUsersJson ? JSON.parse(likedUsersJson) : [];
+}
+
+/**
+ * いいねしたユーザーIDをLocalStorageに保存する
+ * @param userId いいねしたユーザーID
+ */
+export function saveLikedUserId(userId: number): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const likedUsers = getLikedUserIds();
+
+  // 重複を防ぐため、既に存在する場合は追加しない
+  if (!likedUsers.includes(userId)) {
+    likedUsers.push(userId);
+    localStorage.setItem(localStorageKeys.LIKED_USERS, JSON.stringify(likedUsers));
+  }
+}
+
+/**
+ * 当日のいいね情報をリセットする
+ * 注: 現在のMVP実装では使用しないが、将来的に日次リセット機能で使用する可能性がある
+ */
+export function resetLikedUsers(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  localStorage.removeItem(localStorageKeys.LIKED_USERS);
 }

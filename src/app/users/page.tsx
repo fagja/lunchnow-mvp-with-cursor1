@@ -14,6 +14,7 @@ import { API_ERROR_MESSAGES } from '@/constants/error-messages';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { useMatchPolling } from './hooks/useMatchPolling';
 import { navigateToSetup, navigateToChat } from '@/lib/navigation-utils';
+import { getLikedUserIds, saveLikedUserId } from '@/lib/storage-utils';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -108,7 +109,12 @@ export default function UsersPage() {
         console.log('ユーザーデータ取得成功:', response.data?.length || 0, '件');
 
         // 現在のユーザー状態と新しく取得したデータをマージ
+        // LocalStorageのいいね情報も考慮する
         const mergedUsers = mergeUserData(users, response.data || []);
+
+        // デバッグログ
+        console.log('LocalStorageのいいね情報:', getLikedUserIds());
+        console.log('マージ後のユーザー:', mergedUsers.filter(u => u.liked_by_me).length, '人がいいね済み');
 
         safeSetState(setUsers, mergedUsers);
         safeSetState(setLastUpdated, new Date().toLocaleTimeString());
@@ -129,6 +135,14 @@ export default function UsersPage() {
       if (user.liked_by_me) {
         likedStatusMap.set(user.id, true);
       }
+    });
+
+    // LocalStorage からいいね情報を取得
+    const likedUserIds = getLikedUserIds();
+
+    // LocalStorage のいいね情報をマップに追加
+    likedUserIds.forEach(userId => {
+      likedStatusMap.set(userId, true);
     });
 
     // 新しいユーザーデータに現在のいいね状態を適用
@@ -266,6 +280,9 @@ export default function UsersPage() {
 
       // いいねが成功した場合、ユーザーデータを更新
       updateUserLikeStatus(userId);
+
+      // LocalStorage にいいね情報を保存
+      saveLikedUserId(userId);
 
       // マッチング処理
       handleMatchIfExists(response.data, userId);
