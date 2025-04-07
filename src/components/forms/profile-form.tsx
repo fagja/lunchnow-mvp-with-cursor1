@@ -202,7 +202,7 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
           loadingText="保存中..."
           className="w-full max-w-xs"
         >
-          {isEditMode ? 'OK' : '同意して始める'}
+          同意して始める
         </Button>
       </div>
     </form>
