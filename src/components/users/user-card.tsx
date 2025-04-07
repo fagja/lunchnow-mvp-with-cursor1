@@ -15,7 +15,7 @@ export function UserCard({ user, onLike, disabled = false }: UserCardProps) {
           <h3 className="font-bold text-xl mb-1">{user.nickname}</h3>
 
           {/* 学年と学部 */}
-          <p className="text-gray-600 mb-4">
+          <p className="text-xs text-gray-600 mb-4">
             {user.grade} {user.department}
           </p>
 
@@ -24,23 +24,23 @@ export function UserCard({ user, onLike, disabled = false }: UserCardProps) {
             {/* 空き時間 */}
             {user.end_time && (
               <div className="flex items-center">
-                <span className="text-gray-500 w-24">空き時間:</span>
-                <span className="font-medium">{user.end_time}</span>
+                <span className="text-xs text-gray-500 w-24">空き時間:</span>
+                <span className="text-xs font-medium">{user.end_time}</span>
               </div>
             )}
 
             {/* 場所 */}
             {user.place && (
               <div className="flex items-center">
-                <span className="text-gray-500 w-24">希望場所:</span>
-                <span className="font-medium">{user.place}</span>
+                <span className="text-xs text-gray-500 w-24">希望場所:</span>
+                <span className="text-xs font-medium">{user.place}</span>
               </div>
             )}
           </div>
         </div>
       </CardContent>
 
-      <CardFooter className="p-4 bg-gray-50 border-t">
+      <CardFooter className="p-6 bg-gray-50 border-t">
         <Button
           onClick={onLike}
           disabled={disabled}
