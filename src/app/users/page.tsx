@@ -106,13 +106,41 @@ export default function UsersPage() {
         }
       } else {
         console.log('ユーザーデータ取得成功:', response.data?.length || 0, '件');
-        safeSetState(setUsers, response.data || []);
+
+        // 現在のユーザー状態と新しく取得したデータをマージ
+        const mergedUsers = mergeUserData(users, response.data || []);
+
+        safeSetState(setUsers, mergedUsers);
         safeSetState(setLastUpdated, new Date().toLocaleTimeString());
       }
     } catch (err) {
       console.error('ユーザー一覧取得エラー:', err);
       safeSetState(setError, API_ERROR_MESSAGES.FETCH_USERS);
     }
+  };
+
+  // 現在のユーザーデータと新しいユーザーデータをマージする関数
+  const mergeUserData = (currentUsers: RecruitingUser[], newUsers: RecruitingUser[]): RecruitingUser[] => {
+    // ユーザーIDごとのいいね状態を管理するマップを作成
+    const likedStatusMap = new Map<number, boolean>();
+
+    // 現在のユーザーからいいね状態を取り出す
+    currentUsers.forEach(user => {
+      if (user.liked_by_me) {
+        likedStatusMap.set(user.id, true);
+      }
+    });
+
+    // 新しいユーザーデータに現在のいいね状態を適用
+    return newUsers.map(user => {
+      // サーバー側でいいね済みと判定されているか、クライアント側でいいね済みだった場合
+      const isLikedByMe = user.liked_by_me || likedStatusMap.has(user.id);
+
+      return {
+        ...user,
+        liked_by_me: isLikedByMe
+      };
+    });
   };
 
   // マッチング状態をチェックする関数
