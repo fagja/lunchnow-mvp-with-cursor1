@@ -5,5 +5,6 @@
 /**
  * 募集中状態の有効期限（分）
  * ユーザーの募集状態がアクティブと見なされる時間
+ * デフォルトは20分だったが、5時間 (300分) に変更
  */
-export const RECRUITING_EXPIRY_MINUTES = 20;
+export const RECRUITING_EXPIRY_MINUTES = 300;

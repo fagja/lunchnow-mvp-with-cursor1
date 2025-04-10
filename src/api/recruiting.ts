@@ -2,6 +2,7 @@ import { RecruitingUsersResponse } from '@/types/api.types';
 import { fetchApi, createUserIdError } from './api-client';
 import { getUserId, validateUserId } from '@/lib/storage-utils';
 import { RecruitingUser } from '@/types/database.types';
+import { RECRUITING_EXPIRY_MINUTES } from '@/constants/app-settings';
 
 /**
  * APIのベースURL
@@ -66,11 +67,11 @@ export async function fetchRecruitingUsers(): Promise<RecruitingUsersResponse> {
  * 自分のIDと異なるユーザーを取得
  * マッチング済みのユーザーは除外
  *
- * @param minutes 何分以内の更新かを指定（デフォルト20分）
+ * @param minutes 何分以内の更新かを指定（デフォルトは定数値）
  * @returns 募集中ユーザー一覧
  */
 export async function fetchRecentRecruitingUsers(
-  minutes: number = 20
+  minutes: number = RECRUITING_EXPIRY_MINUTES
 ): Promise<RecruitingUsersResponse> {
   const currentUserId = getUserId();
 

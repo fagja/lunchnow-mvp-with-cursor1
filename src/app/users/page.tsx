@@ -374,7 +374,7 @@ export default function UsersPage() {
           >
             プロフィール編集
           </button>
-
+{/* 
           <div className="text-center">
             <p style={{
               fontSize: '0.75rem',
@@ -389,7 +389,7 @@ export default function UsersPage() {
             }}>
               {RECRUITING_EXPIRY_MINUTES}分経過した場合、再度プロフィール設定画面に戻り、再設定してください
             </p>
-          </div>
+          </div> */}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {lastUpdated && (
