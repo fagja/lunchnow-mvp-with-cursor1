@@ -76,38 +76,17 @@ export function Modal({
     onClose();
   };
 
-  // オーバーレイとコンテンツのインラインスタイル定義
-  const overlayStyle: React.CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 9998
-  };
-
-  const contentStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    zIndex: 9999,
-    width: '90%',
-    maxWidth: '28rem',
-    borderRadius: '0.5rem',
-    backgroundColor: 'white',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-    padding: '1.5rem'
-  };
-
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={onClose}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 bg-black/70"
-          style={overlayStyle}
+          className="fixed inset-0 bg-black/70 z-[9998]"
         />
         <DialogPrimitive.Content
-          className="bg-background p-6 shadow-lg rounded-lg"
-          style={contentStyle}
+          className={cn(
+            "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+            "z-[9999] w-[90%] max-w-md rounded-lg bg-background p-6 shadow-lg",
+          )}
         >
           {title && (
             <div className="flex flex-col space-y-2 text-center">
@@ -149,8 +128,7 @@ export function Modal({
 
           {showCloseIcon && (
             <DialogPrimitive.Close
-              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-              style={{ zIndex: 10000 }}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-[10000]"
             >
               <X className="h-5 w-5" />
               <span className="sr-only">閉じる</span>

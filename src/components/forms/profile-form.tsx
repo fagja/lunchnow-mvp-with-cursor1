@@ -124,8 +124,8 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
         </div>
       </div>
 
-      {/* セクション間の区切り（非表示の空白） */}
-      <div style={{ margin: '12px 0', borderBottom: '1px solid #eaeaea' }}></div>
+      {/* セクション間の区切り */}
+      <div className="my-3 border-b border-gray-200"></div>
 
       {/* ステータス入力エリア */}
       <div className="bg-white p-4 rounded-lg shadow-sm border">
@@ -175,39 +175,32 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
       </div>
 
       {/* 利用tips */}
-      <div style={{
-        backgroundColor: '#f9fafb',
-        padding: '6px',
-        borderRadius: '8px',
-        border: '1px solid #e5e7eb',
-        marginBottom: '12px',
-        marginTop: '12px'
-      }}>
-        <h3 style={{ fontSize: '15px', fontWeight: 500, color: '#374151', marginBottom: '4px' }}>利用tips</h3>
-        <ul style={{ fontSize: '10px', color: '#4b5563', paddingLeft: '8px', margin: 0 }}>
-          <li style={{ marginBottom: '2px' }}>すぐにランチ可能な時に利用！</li>
-          <li style={{ marginBottom: '2px' }}>10~15時推奨(ピーク時間は12~13時)！</li>
-          {/* <li style={{ marginBottom: '2px' }}>同時アクセスユーザーしか表示されません！</li> */}
-          <li style={{ marginBottom: '0' }}>ランチ時間帯以外の利用は非推奨！</li>
+      <div className="bg-gray-50 p-1.5 rounded-lg border border-gray-200 my-3">
+        <h3 className="text-[15px] font-medium text-gray-700 mb-1">利用tips</h3>
+        <ul className="text-[10px] text-gray-600 pl-2 m-0 list-disc list-inside">
+          <li className="mb-0.5">すぐにランチ可能な時に利用！</li>
+          <li className="mb-0.5">10~15時推奨(ピーク時間は12~13時)！</li>
+          {/* <li className="mb-0.5">同時アクセスユーザーしか表示されません！</li> */}
+          <li className="mb-0">ランチ時間帯以外の利用は非推奨！</li>
         </ul>
       </div>
 
-      {/* 利用規約とプライバシーポリシーへのリンク部分 - 上部に細い区切り線を追加 */}
-      <div style={{ paddingTop: '10px', marginTop: '10px', borderTop: '1px solid #eaeaea' }}>
-        <div style={{ fontSize: '11px', color: '#666', paddingLeft: '10px' }}>
-          <p style={{ marginBottom: '2px' }}>
+      {/* 利用規約とプライバシーポリシーへのリンク部分 */}
+      <div className="pt-2.5 mt-2.5 border-t border-gray-200">
+        <div className="text-[11px] text-gray-600 pl-2.5">
+          <p className="mb-0.5">
             「同意して始める」を押すことで、
           </p>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Link href="/terms" style={{ color: '#4a86e8', textDecoration: 'underline' }} target="_blank">
+          <div className="flex items-center">
+            <Link href="/terms" className="text-blue-600 underline" target="_blank" prefetch={false}>
               利用規約
             </Link>
-            <span style={{ margin: '0 4px' }}>・</span>
-            <Link href="/privacy" style={{ color: '#4a86e8', textDecoration: 'underline' }} target="_blank">
+            <span className="mx-1">・</span>
+            <Link href="/privacy" className="text-blue-600 underline" target="_blank" prefetch={false}>
               プライバシーポリシー
             </Link>
           </div>
-          <p style={{ marginTop: '2px' }}>に同意したものとみなします。</p>
+          <p className="mt-0.5">に同意したものとみなします。</p>
         </div>
       </div>
 

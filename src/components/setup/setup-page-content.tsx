@@ -12,6 +12,7 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { useUserData } from '@/hooks/useUserData';
 import { getInitialFormData } from '@/lib/form-utils';
 import { navigateFromSetupToUsers } from '@/lib/navigation-utils';
+import Link from "next/link";
 
 export function SetupPageContent() {
   const router = useRouter();
@@ -73,32 +74,38 @@ export function SetupPageContent() {
   const isLoading = loading || userLoading;
 
   return (
-    <PageContainer>
-      <div className="w-full max-w-md mx-auto py-4" style={{ minHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column' }}>
-        <div>
-          <ErrorMessage error={displayError} />
-
-          <ProfileForm
-            initialData={getInitialFormData(user, isEditMode)}
-            onSubmit={handleSubmit}
-            isLoading={isLoading}
-            isEditMode={isEditMode}
-          />
-        </div>
-
-        {/* お問い合わせ先 - フッターとして画面下部に固定 */}
-        <div style={{
-          marginTop: 'auto',
-          paddingTop: '12px',
-          borderTop: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '10px', color: '#6b7280' }}>
-            <p style={{ marginBottom: '4px' }}>アプリに関するお問い合わせはインスタDMもしくはメールでお願いします。（インスタの方が返信は早いです）</p>
-            <p style={{ marginBottom: '0' }}>インスタ: @lunchnow_keio　　　mail: lunchnow.keio@gmail.com</p>
+    <div className="flex flex-col min-h-screen bg-background">
+      <header className="sticky top-0 z-10 border-b bg-background">
+        {/* ... */}
+      </header>
+      <main className="flex-1 overflow-auto p-4">
+        <div className="w-full max-w-md mx-auto py-4 min-h-[calc(100vh-40px)] flex flex-col">
+          <div className="space-y-4">
+            <ErrorMessage error={displayError} />
+            <ProfileForm
+              initialData={getInitialFormData(user, isEditMode)}
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+              isEditMode={isEditMode}
+            />
           </div>
         </div>
-      </div>
-    </PageContainer>
+      </main>
+      <footer className="border-t bg-muted/40 p-4 text-center text-sm">
+        <div className="text-[10px] text-gray-500">
+          <p className="mb-1">アプリに関するお問い合わせはインスタDMもしくはメールでお願いします。（インスタの方が返信は早いです）</p>
+          <p className="mb-0">インスタ: @lunchnow_keio　　　mail: lunchnow.keio@gmail.com</p>
+        </div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          <Link href="/terms" className="underline" prefetch={false}>
+            利用規約
+          </Link>
+          <span className="mx-1">・</span>
+          <Link href="/privacy" className="underline" prefetch={false}>
+            プライバシーポリシー
+          </Link>
+        </div>
+      </footer>
+    </div>
   );
 }

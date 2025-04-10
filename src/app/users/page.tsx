@@ -15,6 +15,7 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { useMatchPolling } from './hooks/useMatchPolling';
 import { navigateToSetup, navigateToChat } from '@/lib/navigation-utils';
 import { getLikedUserIds, saveLikedUserId } from '@/lib/storage-utils';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -25,38 +26,6 @@ export default function UsersPage() {
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUser, setMatchedUser] = useState<RecruitingUser | null>(null);
   const isMountedRef = useRef(true);
-  const [gridCols, setGridCols] = useState('repeat(2, minmax(0, 1fr))');
-
-  // ウィンドウサイズの変更を監視して列数を調整
-  useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < 640) {
-        // スマートフォン
-        setGridCols('repeat(2, minmax(0, 1fr))');
-      } else if (width < 768) {
-        // sm
-        setGridCols('repeat(3, minmax(0, 1fr))');
-      } else if (width < 1024) {
-        // md
-        setGridCols('repeat(4, minmax(0, 1fr))');
-      } else {
-        // lg以上
-        setGridCols('repeat(5, minmax(0, 1fr))');
-      }
-    };
-
-    // 初期設定
-    handleResize();
-
-    // リサイズイベントリスナーを追加
-    window.addEventListener('resize', handleResize);
-
-    // クリーンアップ
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
 
   // マウント状態を確認して状態を安全に更新する関数
   const safeSetState = (setter: any, value: any) => {
@@ -356,75 +325,21 @@ export default function UsersPage() {
               e.stopPropagation();
               handleEditProfile();
             }}
-            style={{
-              padding: '8px 16px',
-              fontSize: '0.875rem',
-              backgroundColor: 'white',
-              border: '1px solid #d1d5db',
-              borderRadius: '0.375rem',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseOver={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#f9fafb';
-            }}
-            onMouseOut={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'white';
-            }}
+            className="py-2 px-4 text-sm bg-white border border-gray-300 rounded-md cursor-pointer transition hover:bg-gray-50"
           >
             プロフィール編集
           </button>
-{/* 
-          <div className="text-center">
-            <p style={{
-              fontSize: '0.75rem',
-              color: '#6b7280',
-              marginBottom: '2px'
-            }}>
-              プロフィール設定後{RECRUITING_EXPIRY_MINUTES}分間相手画面に表示されます
-            </p>
-            <p style={{
-              fontSize: '0.75rem',
-              color: '#9ca3af'
-            }}>
-              {RECRUITING_EXPIRY_MINUTES}分経過した場合、再度プロフィール設定画面に戻り、再設定してください
-            </p>
-          </div> */}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="flex items-center gap-2">
             {lastUpdated && (
-              <p style={{
-                fontSize: '0.75rem',
-                color: '#6b7280',
-                margin: '0'
-              }}>
+              <p className="text-xs text-gray-500 m-0">
                 最終更新: {lastUpdated}
               </p>
             )}
             <button
               onClick={loadUsers}
               disabled={loading}
-              style={{
-                padding: '8px 16px',
-                fontSize: '0.875rem',
-                backgroundColor: loading ? '#818cf8' : '#4f46e5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: loading ? 'default' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-                transition: 'background-color 0.2s, opacity 0.2s'
-              }}
-              onMouseOver={(e) => {
-                if (!loading) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#4338ca';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!loading) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#4f46e5';
-                }
-              }}
+              className={`py-2 px-4 text-sm text-white rounded-md transition ${loading ? 'bg-indigo-400 cursor-default opacity-70' : 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'}`}
             >
               {loading ? '更新中...' : '更新'}
             </button>
@@ -436,28 +351,12 @@ export default function UsersPage() {
 
         {/* ユーザー一覧 */}
         {loading && users.length === 0 ? (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '16rem'
-          }}>
-            <div style={{
-              height: '3rem',
-              width: '3rem',
-              borderRadius: '9999px',
-              borderBottom: '2px solid #4f46e5',
-              animation: 'spin 1s linear infinite'
-            }}></div>
+          <div className="flex justify-center items-center h-64">
+            <LoadingSpinner />
           </div>
         ) : users.length > 0 ? (
           <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: gridCols,
-              gap: '1rem',
-              width: '100%'
-            }}
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full"
           >
             {users.map(user => (
               <UserCard
@@ -469,15 +368,8 @@ export default function UsersPage() {
             ))}
           </div>
         ) : (
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e5e7eb',
-            textAlign: 'center'
-          }}>
-            <p style={{ color: '#4b5563' }}>
+          <div className="bg-white p-8 rounded-lg shadow border border-gray-200 text-center">
+            <p className="text-gray-600">
               同時アクセスの未マッチユーザーはいません。また後で確認してください。 *10~15時(特に12~13時)の利用を推奨しています
             </p>
           </div>

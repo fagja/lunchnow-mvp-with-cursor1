@@ -2,98 +2,46 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RecruitingUser } from '@/types/database.types';
 import { UserCardProps } from '@/types/component.types';
+import { cn } from '@/lib/utils';
 
 export function UserCard({ user, onLike, disabled = false }: UserCardProps) {
   return (
     <Card
-      style={{
-        border: '1px solid rgba(0, 0, 0, 0.12)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        borderRadius: '12px',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        height: '100%',
-        maxHeight: '220px',
-        transition: 'transform 0.2s, box-shadow 0.2s'
-      }}
-      onMouseOver={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.12)';
-      }}
-      onMouseOut={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-      }}
+      className={cn(
+        'border border-black/10 shadow-md rounded-xl w-full flex flex-col justify-between h-full max-h-[220px]',
+        'transition duration-200 ease-in-out hover:-translate-y-[3px] hover:shadow-lg'
+      )}
     >
-      <CardContent style={{ padding: '12px 16px 8px', flex: '1 1 auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <CardContent className="px-4 pt-3 pb-2 flex-1">
+        <div className="flex flex-col">
           {/* ニックネーム */}
-          <h3 style={{
-            fontWeight: 'bold',
-            fontSize: '1.1rem',
-            marginBottom: '2px',
-            color: '#333'
-          }}>
+          <h3 className="font-bold text-lg mb-0.5 text-gray-800">
             {user.nickname}
           </h3>
 
           {/* 学年と学部 */}
-          <p style={{
-            fontSize: '0.75rem',
-            color: '#666',
-            marginBottom: '8px',
-            lineHeight: '1.2'
-          }}>
+          <p className="text-xs text-gray-600 mb-2 leading-tight">
             {user.grade} {user.department}
           </p>
 
           {/* ステータス情報 */}
-          <div style={{
-            borderTop: '1px solid #eaeaea',
-            paddingTop: '8px',
-            marginBottom: '0'
-          }}>
+          <div className="border-t border-gray-200 pt-2 mb-0">
             {/* 空き時間 */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: '4px'
-            }}>
-              <span style={{
-                fontSize: '0.75rem',
-                color: '#666',
-                width: '5rem'
-              }}>
+            <div className="flex items-center mb-1">
+              <span className="text-xs text-gray-600 w-20">
                 空き時間:
               </span>
-              <span style={{
-                fontSize: '0.75rem',
-                fontWeight: '500',
-                color: '#333'
-              }}>
+              <span className="text-xs font-medium text-gray-800">
                 {user.end_time || '未設定'}
               </span>
             </div>
 
             {/* 場所 */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <span style={{
-                fontSize: '0.75rem',
-                color: '#666',
-                width: '5rem'
-              }}>
+            <div className="flex items-center">
+              <span className="text-xs text-gray-600 w-20">
                 希望場所:
               </span>
-              <span style={{
-                fontSize: '0.75rem',
-                fontWeight: '500',
-                color: '#333'
-              }}>
+              <span className="text-xs font-medium text-gray-800">
                 {user.place || '未設定'}
               </span>
             </div>
@@ -101,35 +49,17 @@ export function UserCard({ user, onLike, disabled = false }: UserCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter style={{
-        padding: '8px 16px 12px',
-        backgroundColor: '#f9fafb',
-        borderTop: '1px solid #eaeaea'
-      }}>
+      <CardFooter className="px-4 pt-2 pb-3 bg-gray-50 border-t border-gray-200">
         <Button
           onClick={onLike}
           disabled={disabled}
-          style={{
-            width: '100%',
-            fontSize: '0.85rem',
-            padding: '6px 12px',
-            borderRadius: '8px',
-            transition: 'all 0.2s',
-            fontWeight: '500',
-            ...(user.liked_by_me ? {
-              backgroundColor: '#dcfce7',
-              color: '#16a34a',
-              border: '1px solid #86efac'
-            } : {
-              backgroundColor: '#4f46e5',
-              color: 'white',
-              border: '1px solid #4338ca'
-            }),
-            ...(disabled && !user.liked_by_me ? {
-              opacity: 0.6,
-              cursor: 'not-allowed'
-            } : {})
-          }}
+          className={cn(
+            'w-full text-sm px-3 py-1.5 rounded-lg transition-all duration-200 font-medium',
+            user.liked_by_me
+              ? 'bg-green-100 text-green-600 border border-green-300'
+              : 'bg-indigo-600 text-white border border-indigo-700',
+            disabled && !user.liked_by_me && 'opacity-60 cursor-not-allowed'
+          )}
         >
           {user.liked_by_me ? '✓ いいね済み' : 'いいね！'}
         </Button>
