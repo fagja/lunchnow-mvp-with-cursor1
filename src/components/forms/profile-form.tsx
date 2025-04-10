@@ -56,13 +56,13 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* プロフィール入力エリア */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold text-lg mb-4">👤 あなたの情報</h2>
+      <div className="bg-white p-4 rounded-lg shadow-sm border">
+        <h2 className="font-semibold text-lg mb-3">👤 あなたの情報</h2>
 
         {/* ニックネーム */}
-        <div className="mb-4 pb-4 border-b border-gray-100">
+        <div className="mb-3 pb-3 border-b border-gray-100">
           <label htmlFor="nickname" className="block text-sm font-medium mb-1">
             ニックネーム <span className="text-red-500">*</span>
           </label>
@@ -80,7 +80,7 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
         </div>
 
         {/* 学年 */}
-        <div className="mb-4 pb-4 border-b border-gray-100">
+        <div className="mb-3 pb-3 border-b border-gray-100">
           <label htmlFor="grade" className="block text-sm font-medium mb-1">
             学年 <span className="text-red-500">*</span>
           </label>
@@ -125,14 +125,14 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
       </div>
 
       {/* セクション間の区切り（非表示の空白） */}
-      <div style={{ margin: '20px 0', borderBottom: '1px solid #eaeaea' }}></div>
+      <div style={{ margin: '12px 0', borderBottom: '1px solid #eaeaea' }}></div>
 
       {/* ステータス入力エリア */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="font-semibold text-lg mb-4">🍴 ランチの予定</h2>
+      <div className="bg-white p-4 rounded-lg shadow-sm border">
+        <h2 className="font-semibold text-lg mb-3">🍴 ランチの予定</h2>
 
         {/* 空き時間 */}
-        <div className="mb-4 pb-4 border-b border-gray-100">
+        <div className="mb-3 pb-3 border-b border-gray-100">
           <label htmlFor="end_time" className="block text-sm font-medium mb-1">
             いつまで空いているか
           </label>
@@ -175,9 +175,9 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
       </div>
 
       {/* 利用規約とプライバシーポリシーへのリンク部分 - 上部に細い区切り線を追加 */}
-      <div style={{ paddingTop: '16px', marginTop: '16px', borderTop: '1px solid #eaeaea' }}>
+      <div style={{ paddingTop: '10px', marginTop: '10px', borderTop: '1px solid #eaeaea' }}>
         <div style={{ fontSize: '11px', color: '#666', paddingLeft: '10px' }}>
-          <p style={{ marginBottom: '4px' }}>
+          <p style={{ marginBottom: '2px' }}>
             「同意して始める」を押すことで、
           </p>
           <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -189,12 +189,12 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
               プライバシーポリシー
             </Link>
           </div>
-          <p style={{ marginTop: '4px' }}>に同意したものとみなします。</p>
+          <p style={{ marginTop: '2px' }}>に同意したものとみなします。</p>
         </div>
       </div>
 
       {/* 送信ボタン */}
-      <div className="flex justify-center mt-4">
+      <div className="flex justify-center mt-3">
         <Button
           type="submit"
           disabled={isLoading}
