@@ -174,6 +174,24 @@ export function ProfileForm({ initialData = {}, onSubmit, isLoading = false, isE
         </div>
       </div>
 
+      {/* 利用tips */}
+      <div style={{
+        backgroundColor: '#f9fafb',
+        padding: '6px',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb',
+        marginBottom: '12px',
+        marginTop: '12px'
+      }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 500, color: '#374151', marginBottom: '4px' }}>利用tips</h3>
+        <ul style={{ fontSize: '10px', color: '#4b5563', paddingLeft: '8px', margin: 0 }}>
+          <li style={{ marginBottom: '2px' }}>すぐにランチ可能な時に利用！</li>
+          <li style={{ marginBottom: '2px' }}>10~15時推奨(ピーク時間は12~13時)！</li>
+          {/* <li style={{ marginBottom: '2px' }}>同時アクセスユーザーしか表示されません！</li> */}
+          <li style={{ marginBottom: '0' }}>ランチ時間帯以外の利用は非推奨！</li>
+        </ul>
+      </div>
+
       {/* 利用規約とプライバシーポリシーへのリンク部分 - 上部に細い区切り線を追加 */}
       <div style={{ paddingTop: '10px', marginTop: '10px', borderTop: '1px solid #eaeaea' }}>
         <div style={{ fontSize: '11px', color: '#666', paddingLeft: '10px' }}>
