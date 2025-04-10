@@ -381,13 +381,13 @@ export default function UsersPage() {
               color: '#6b7280',
               marginBottom: '2px'
             }}>
-              募集状態は{RECRUITING_EXPIRY_MINUTES}分間有効です
+              プロフィール設定後{RECRUITING_EXPIRY_MINUTES}分間相手画面に表示されます
             </p>
             <p style={{
-              fontSize: '0.65rem',
+              fontSize: '0.75rem',
               color: '#9ca3af'
             }}>
-              {RECRUITING_EXPIRY_MINUTES}分経過した場合、再度ランチ設定画面に戻り、再設定してください
+              {RECRUITING_EXPIRY_MINUTES}分経過した場合、再度プロフィール設定画面に戻り、再設定してください
             </p>
           </div>
 
