@@ -12,8 +12,13 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "LunchNow - 慶應日吉キャンパスのランチアプリ",
-  description: "慶應日吉キャンパスで、ランチ相手を”その場で”見つける",
+  description: "慶應日吉キャンパスで、ランチ相手を\"その場で\"見つける",
 };
+
+const MAINTENANCE_MESSAGE = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true'
+  ? `申し訳ありません。
+4/12(土)、4/13(日)はアプリのメンテナンスを実施いたします。`
+  : null;
 
 export default function RootLayout({
   children,
@@ -24,7 +29,13 @@ export default function RootLayout({
     <html lang="ja">
       <body className={`${inter.className} antialiased`}>
         <PageContainer>
-          {children}
+          {MAINTENANCE_MESSAGE ? (
+            <div className="flex flex-col items-center justify-center min-h-screen text-center">
+              <p className="text-xl font-semibold whitespace-pre-line">{MAINTENANCE_MESSAGE}</p>
+            </div>
+          ) : (
+            children
+          )}
         </PageContainer>
         <SpeedInsights />
         <Analytics />
